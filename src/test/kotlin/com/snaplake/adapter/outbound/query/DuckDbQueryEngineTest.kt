@@ -93,8 +93,8 @@ private fun createTestParquet(): java.nio.file.Path {
             stmt.execute("INSERT INTO test_data VALUES (3, 'Charlie', 92.1)")
         }
         val rs = conn.createStatement().executeQuery("SELECT * FROM test_data ORDER BY id")
-        val parquetBytes = com.snaplake.adapter.outbound.database.ParquetWriter.writeResultSetToParquet(rs)
-        Files.write(tempParquet, parquetBytes)
+        val result = com.snaplake.adapter.outbound.database.DuckDbParquetWriter().writeResultSetToParquet(rs)
+        Files.write(tempParquet, result.data)
     }
     Files.deleteIfExists(tempDb)
 
