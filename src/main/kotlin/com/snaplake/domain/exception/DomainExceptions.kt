@@ -42,3 +42,8 @@ class InvalidCredentialsException : DomainException(
     code = "INVALID_CREDENTIALS",
     message = "Invalid username or password",
 )
+
+class QueryExecutionFailedException(cause: String) : DomainException(
+    code = "QUERY_EXECUTION_FAILED",
+    message = cause,
+)

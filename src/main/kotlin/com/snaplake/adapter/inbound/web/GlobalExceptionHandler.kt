@@ -24,6 +24,7 @@ class GlobalExceptionHandler {
             is DatasourceConnectionFailedException -> HttpStatus.BAD_GATEWAY
             is StorageConnectionFailedException -> HttpStatus.BAD_GATEWAY
             is InvalidCredentialsException -> HttpStatus.UNAUTHORIZED
+            is QueryExecutionFailedException -> HttpStatus.BAD_REQUEST
         }
 
         log.warn("Domain exception: {} - {}", e.code, e.message)
