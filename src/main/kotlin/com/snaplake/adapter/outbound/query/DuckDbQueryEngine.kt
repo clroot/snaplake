@@ -13,12 +13,21 @@ import java.sql.ResultSet
 @Component
 class DuckDbQueryEngine : QueryEngine {
 
-    override fun executeQuery(sql: String, storageConfig: StorageConfig?, limit: Int, offset: Int): QueryResult {
+    override fun executeQuery(
+        sql: String,
+        storageConfig: StorageConfig?,
+        limit: Int,
+        offset: Int,
+        viewSetupSql: List<String>,
+    ): QueryResult {
         validateQuery(sql)
         val wrappedSql = "SELECT * FROM ($sql) AS _q LIMIT $limit OFFSET $offset"
 
         return createConnection(storageConfig).use { conn ->
             conn.createStatement().use { stmt ->
+                viewSetupSql.forEach { setupSql ->
+                    stmt.execute(setupSql)
+                }
                 stmt.executeQuery(wrappedSql).use { rs ->
                     resultSetToQueryResult(rs)
                 }

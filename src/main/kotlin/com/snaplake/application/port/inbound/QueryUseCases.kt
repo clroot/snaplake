@@ -11,6 +11,17 @@ interface ExecuteQueryUseCase {
         val sql: String,
         val limit: Int = 100,
         val offset: Int = 0,
+        val context: SnapshotContext? = null,
+    )
+
+    data class SnapshotContext(
+        val default: SnapshotId,
+        val additional: List<AliasedSnapshot> = emptyList(),
+    )
+
+    data class AliasedSnapshot(
+        val snapshotId: SnapshotId,
+        val alias: String,
     )
 }
 

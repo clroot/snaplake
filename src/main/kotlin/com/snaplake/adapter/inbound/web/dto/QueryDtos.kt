@@ -7,6 +7,17 @@ data class ExecuteQueryRequest(
     val sql: String,
     val limit: Int = 100,
     val offset: Int = 0,
+    val context: SnapshotContextRequest? = null,
+)
+
+data class SnapshotContextRequest(
+    val default: String,
+    val additional: List<AliasedSnapshotRequest> = emptyList(),
+)
+
+data class AliasedSnapshotRequest(
+    val snapshotId: String,
+    val alias: String,
 )
 
 data class QueryResultResponse(

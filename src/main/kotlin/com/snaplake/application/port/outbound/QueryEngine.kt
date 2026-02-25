@@ -14,7 +14,13 @@ data class ColumnSchema(
 )
 
 interface QueryEngine {
-    fun executeQuery(sql: String, storageConfig: StorageConfig?, limit: Int = 100, offset: Int = 0): QueryResult
+    fun executeQuery(
+        sql: String,
+        storageConfig: StorageConfig?,
+        limit: Int = 100,
+        offset: Int = 0,
+        viewSetupSql: List<String> = emptyList(),
+    ): QueryResult
     fun describeTable(uri: String, storageConfig: StorageConfig?): List<ColumnSchema>
     fun countRows(uri: String, storageConfig: StorageConfig?): Long
     fun previewTable(

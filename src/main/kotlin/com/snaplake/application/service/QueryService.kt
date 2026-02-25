@@ -23,11 +23,14 @@ class QueryService(
 
     override fun executeQuery(command: ExecuteQueryUseCase.Command): QueryResult {
         val storageConfig = loadStorageConfigPort.find()
+        val viewSetupSql = command.context?.let { buildViewSetupSql(it) } ?: emptyList()
+
         return queryEngine.executeQuery(
             sql = command.sql,
             storageConfig = storageConfig,
             limit = command.limit,
             offset = command.offset,
+            viewSetupSql = viewSetupSql,
         )
     }
 
@@ -61,5 +64,29 @@ class QueryService(
             limit = command.limit,
             offset = command.offset,
         )
+    }
+
+    private fun buildViewSetupSql(context: ExecuteQueryUseCase.SnapshotContext): List<String> {
+        val sqls = mutableListOf<String>()
+
+        val defaultSnapshot = loadSnapshotPort.findById(context.default)
+            ?: throw SnapshotNotFoundException(context.default)
+
+        for (table in defaultSnapshot.tables) {
+            val uri = storageProvider.getUri(table.storagePath)
+            sqls.add("""CREATE VIEW "${table.table}" AS SELECT * FROM '$uri'""")
+        }
+
+        for (aliased in context.additional) {
+            val snapshot = loadSnapshotPort.findById(aliased.snapshotId)
+                ?: throw SnapshotNotFoundException(aliased.snapshotId)
+            sqls.add("""CREATE SCHEMA "${aliased.alias}"""")
+            for (table in snapshot.tables) {
+                val uri = storageProvider.getUri(table.storagePath)
+                sqls.add("""CREATE VIEW "${aliased.alias}"."${table.table}" AS SELECT * FROM '$uri'""")
+            }
+        }
+
+        return sqls
     }
 }

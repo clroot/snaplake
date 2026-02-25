@@ -19,11 +19,24 @@ class QueryController(
 ) {
     @PostMapping("/query")
     fun executeQuery(@RequestBody request: ExecuteQueryRequest): ResponseEntity<QueryResultResponse> {
+        val context = request.context?.let { ctx ->
+            ExecuteQueryUseCase.SnapshotContext(
+                default = SnapshotId(ctx.default),
+                additional = ctx.additional.map { aliased ->
+                    ExecuteQueryUseCase.AliasedSnapshot(
+                        snapshotId = SnapshotId(aliased.snapshotId),
+                        alias = aliased.alias,
+                    )
+                },
+            )
+        }
+
         val result = executeQueryUseCase.executeQuery(
             ExecuteQueryUseCase.Command(
                 sql = request.sql,
                 limit = request.limit,
                 offset = request.offset,
+                context = context,
             )
         )
         return ResponseEntity.ok(QueryResultResponse.from(result))
