@@ -9,24 +9,16 @@ export interface SnapshotResponse {
   tables: { schema: string; table: string }[]
 }
 
-export interface SnapshotContextDefault {
+export interface SnapshotContextEntry {
   datasourceId: string
   snapshotId: string
   snapshotLabel: string
-  tables: string[]
-}
-
-export interface SnapshotContextAdditional {
-  datasourceId: string
-  snapshotId: string
-  snapshotLabel: string
-  tables: string[]
+  datasourceName: string
   alias: string
 }
 
 export interface SnapshotContextState {
-  default: SnapshotContextDefault | null
-  additional: SnapshotContextAdditional[]
+  entries: SnapshotContextEntry[]
 }
 
 export function formatSnapshotLabel(snap: SnapshotResponse): string {
@@ -37,6 +29,9 @@ export function formatSnapshotLabel(snap: SnapshotResponse): string {
   return `${snap.snapshotType} / ${snap.snapshotDate} ${time}`
 }
 
-export function getTableNames(snap: SnapshotResponse): string[] {
-  return snap.tables.map((t) => `${t.schema}.${t.table}`)
+export function nextAlias(existing: SnapshotContextEntry[]): string {
+  const used = new Set(existing.map((e) => e.alias))
+  let i = 1
+  while (used.has(`s${i}`)) i++
+  return `s${i}`
 }

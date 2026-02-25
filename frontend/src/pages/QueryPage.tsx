@@ -6,12 +6,11 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { QueryEditor } from "@/components/query/QueryEditor"
 import { QueryResult } from "@/components/query/QueryResult"
-import { SnapshotContextPanel } from "@/components/query/SnapshotContextPanel"
+import { SnapshotContextBar } from "@/components/query/SnapshotContextBar"
 import {
   type SnapshotContextState,
   type SnapshotResponse,
   formatSnapshotLabel,
-  getTableNames,
 } from "@/components/query/snapshot-context-utils"
 import {
   addQueryHistory,
@@ -36,19 +35,21 @@ const PAGE_SIZE = 100
 
 function buildInitialContext(snap: SnapshotResponse): SnapshotContextState {
   return {
-    default: {
-      datasourceId: snap.datasourceId,
-      snapshotId: snap.id,
-      snapshotLabel: formatSnapshotLabel(snap),
-      tables: getTableNames(snap),
-    },
-    additional: [],
+    entries: [
+      {
+        datasourceId: snap.datasourceId,
+        snapshotId: snap.id,
+        snapshotLabel: formatSnapshotLabel(snap),
+        datasourceName: snap.datasourceName,
+        alias: "s1",
+      },
+    ],
   }
 }
 
 function buildInitialSql(snap: SnapshotResponse): string {
-  const firstTable = getTableNames(snap)[0]
-  return firstTable ? `SELECT * FROM ${firstTable}` : ""
+  const firstTable = snap.tables[0]
+  return firstTable ? `SELECT * FROM ${firstTable.table}` : ""
 }
 
 export function QueryPage() {
@@ -63,10 +64,8 @@ export function QueryPage() {
   const [showHistory, setShowHistory] = useState(false)
   const [history, setHistory] = useState<QueryHistoryEntry[]>(getQueryHistory)
   const [context, setContext] = useState<SnapshotContextState>({
-    default: null,
-    additional: [],
+    entries: [],
   })
-  const [defaultDatasourceId, setDefaultDatasourceId] = useState("")
   const [initialized, setInitialized] = useState(false)
 
   // Fetch initial snapshot and auto-configure context
@@ -80,24 +79,22 @@ export function QueryPage() {
   // Initialize context from fetched snapshot (runs once)
   if (initialSnapshot && !initialized) {
     setInitialized(true)
-    setDefaultDatasourceId(initialSnapshot.datasourceId)
     setContext(buildInitialContext(initialSnapshot))
     setSqlText(buildInitialSql(initialSnapshot))
   }
 
   const executeMutation = useMutation({
     mutationFn: async (params: { sql: string; offset: number }) => {
-      const apiContext = context.default
-        ? {
-            default: context.default.snapshotId,
-            additional: context.additional
-              .filter((a) => a.snapshotId)
-              .map((a) => ({
-                snapshotId: a.snapshotId,
-                alias: a.alias,
+      const validEntries = context.entries.filter((e) => e.snapshotId)
+      const apiContext =
+        validEntries.length > 0
+          ? {
+              snapshots: validEntries.map((e) => ({
+                snapshotId: e.snapshotId,
+                alias: e.alias,
               })),
-          }
-        : undefined
+            }
+          : undefined
 
       const start = performance.now()
       const data = await api.post<QueryResultData>("/api/query", {
@@ -152,13 +149,8 @@ export function QueryPage() {
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] -m-6 flex-col">
-      {/* Context Panel */}
-      <SnapshotContextPanel
-        context={context}
-        onContextChange={setContext}
-        defaultDatasourceId={defaultDatasourceId}
-        onDefaultDatasourceIdChange={setDefaultDatasourceId}
-      />
+      {/* Context Bar */}
+      <SnapshotContextBar context={context} onContextChange={setContext} />
 
       {/* Editor area */}
       <div
