@@ -4,6 +4,7 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import com.snaplake.adapter.outbound.database.DuckDbParquetWriter
 import java.nio.file.Files
 import java.sql.DriverManager
 
@@ -92,9 +93,11 @@ private fun createTestParquet(): java.nio.file.Path {
             stmt.execute("INSERT INTO test_data VALUES (2, 'Bob', 87.3)")
             stmt.execute("INSERT INTO test_data VALUES (3, 'Charlie', 92.1)")
         }
-        val rs = conn.createStatement().executeQuery("SELECT * FROM test_data ORDER BY id")
-        val result = com.snaplake.adapter.outbound.database.DuckDbParquetWriter().writeResultSetToParquet(rs)
-        Files.write(tempParquet, result.data)
+        conn.createStatement().use { queryStmt ->
+            val rs = queryStmt.executeQuery("SELECT * FROM test_data ORDER BY id")
+            val result = DuckDbParquetWriter().writeResultSetToParquet(rs)
+            Files.write(tempParquet, result.data)
+        }
     }
     Files.deleteIfExists(tempDb)
 
