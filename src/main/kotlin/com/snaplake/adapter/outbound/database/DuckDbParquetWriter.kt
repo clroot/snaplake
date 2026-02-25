@@ -24,10 +24,10 @@ class DuckDbParquetWriter : ParquetWritePort {
             )
         }
 
-        val duckConn = DriverManager.getConnection("jdbc:duckdb:") as DuckDBConnection
         val tempFile = Files.createTempFile("snaplake-duckdb-", ".parquet")
 
         try {
+            val duckConn = DriverManager.getConnection("jdbc:duckdb:") as DuckDBConnection
             duckConn.use { conn ->
                 val createTableSql = buildCreateTableSql(columns)
                 conn.createStatement().use { stmt ->
@@ -52,7 +52,7 @@ class DuckDbParquetWriter : ParquetWritePort {
 
     private fun buildCreateTableSql(columns: List<ColumnDef>): String {
         val columnDefs = columns.joinToString(", ") { col ->
-            "\"${col.name}\" ${mapSqlTypeToDuckDb(col.sqlType)}"
+            "\"${col.name.replace("\"", "\"\"")}\" ${mapSqlTypeToDuckDb(col.sqlType)}"
         }
         return "CREATE TABLE snap_export ($columnDefs)"
     }
@@ -122,8 +122,14 @@ class DuckDbParquetWriter : ParquetWritePort {
             SqlTypes.NUMERIC, SqlTypes.DECIMAL ->
                 appender.append((obj as? BigDecimal)?.toPlainString() ?: obj.toString())
 
-            SqlTypes.BINARY, SqlTypes.VARBINARY, SqlTypes.LONGVARBINARY, SqlTypes.BLOB ->
-                appender.append(obj as ByteArray)
+            SqlTypes.BINARY, SqlTypes.VARBINARY, SqlTypes.LONGVARBINARY, SqlTypes.BLOB -> {
+                val bytes = when (obj) {
+                    is ByteArray -> obj
+                    is java.sql.Blob -> obj.binaryStream.use { it.readBytes() }
+                    else -> obj.toString().toByteArray()
+                }
+                appender.append(bytes)
+            }
 
             else ->
                 appender.append(obj.toString())

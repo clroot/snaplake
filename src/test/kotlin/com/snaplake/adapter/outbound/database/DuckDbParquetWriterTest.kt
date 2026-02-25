@@ -31,30 +31,32 @@ class DuckDbParquetWriterTest : DescribeSpec({
 
                     // Verify data is readable by DuckDB
                     val tempParquet = Files.createTempFile("verify-", ".parquet")
-                    Files.write(tempParquet, result.data)
+                    try {
+                        Files.write(tempParquet, result.data)
 
-                    DriverManager.getConnection("jdbc:duckdb:").use { duckConn ->
-                        duckConn.createStatement().use { duckStmt ->
-                            val duckRs = duckStmt.executeQuery(
-                                "SELECT * FROM '${tempParquet}' ORDER BY id"
-                            )
-                            duckRs.next() shouldBe true
-                            duckRs.getInt("id") shouldBe 1
-                            duckRs.getString("name") shouldBe "Alice"
+                        DriverManager.getConnection("jdbc:duckdb:").use { duckConn ->
+                            duckConn.createStatement().use { duckStmt ->
+                                val duckRs = duckStmt.executeQuery(
+                                    "SELECT * FROM '${tempParquet}' ORDER BY id"
+                                )
+                                duckRs.next() shouldBe true
+                                duckRs.getInt("id") shouldBe 1
+                                duckRs.getString("name") shouldBe "Alice"
 
-                            duckRs.next() shouldBe true
-                            duckRs.getInt("id") shouldBe 2
-                            duckRs.getString("name") shouldBe "Bob"
+                                duckRs.next() shouldBe true
+                                duckRs.getInt("id") shouldBe 2
+                                duckRs.getString("name") shouldBe "Bob"
 
-                            duckRs.next() shouldBe true
-                            duckRs.getInt("id") shouldBe 3
-                            duckRs.getString("name") shouldBe "Charlie"
+                                duckRs.next() shouldBe true
+                                duckRs.getInt("id") shouldBe 3
+                                duckRs.getString("name") shouldBe "Charlie"
 
-                            duckRs.next() shouldBe false
+                                duckRs.next() shouldBe false
+                            }
                         }
+                    } finally {
+                        Files.deleteIfExists(tempParquet)
                     }
-
-                    Files.deleteIfExists(tempParquet)
                 }
             } finally {
                 Files.deleteIfExists(dbPath)
@@ -78,19 +80,21 @@ class DuckDbParquetWriterTest : DescribeSpec({
 
                     // Verify valid Parquet with DuckDB
                     val tempParquet = Files.createTempFile("verify-empty-", ".parquet")
-                    Files.write(tempParquet, result.data)
+                    try {
+                        Files.write(tempParquet, result.data)
 
-                    DriverManager.getConnection("jdbc:duckdb:").use { duckConn ->
-                        duckConn.createStatement().use { duckStmt ->
-                            val duckRs = duckStmt.executeQuery(
-                                "SELECT COUNT(*) as cnt FROM '${tempParquet}'"
-                            )
-                            duckRs.next()
-                            duckRs.getInt("cnt") shouldBe 0
+                        DriverManager.getConnection("jdbc:duckdb:").use { duckConn ->
+                            duckConn.createStatement().use { duckStmt ->
+                                val duckRs = duckStmt.executeQuery(
+                                    "SELECT COUNT(*) as cnt FROM '${tempParquet}'"
+                                )
+                                duckRs.next()
+                                duckRs.getInt("cnt") shouldBe 0
+                            }
                         }
+                    } finally {
+                        Files.deleteIfExists(tempParquet)
                     }
-
-                    Files.deleteIfExists(tempParquet)
                 }
             } finally {
                 Files.deleteIfExists(dbPath)
@@ -115,35 +119,37 @@ class DuckDbParquetWriterTest : DescribeSpec({
 
                     // Verify NULLs round-trip through DuckDB
                     val tempParquet = Files.createTempFile("verify-null-", ".parquet")
-                    Files.write(tempParquet, result.data)
+                    try {
+                        Files.write(tempParquet, result.data)
 
-                    DriverManager.getConnection("jdbc:duckdb:").use { duckConn ->
-                        duckConn.createStatement().use { duckStmt ->
-                            val duckRs = duckStmt.executeQuery(
-                                "SELECT * FROM '${tempParquet}' ORDER BY seq"
-                            )
+                        DriverManager.getConnection("jdbc:duckdb:").use { duckConn ->
+                            duckConn.createStatement().use { duckStmt ->
+                                val duckRs = duckStmt.executeQuery(
+                                    "SELECT * FROM '${tempParquet}' ORDER BY seq"
+                                )
 
-                            // Row 1: id=1, name=NULL, score=95.5
-                            duckRs.next() shouldBe true
-                            duckRs.getString("id") shouldBe "1"
-                            duckRs.getObject("name") shouldBe null
-                            duckRs.wasNull() shouldBe true
+                                // Row 1: id=1, name=NULL, score=95.5
+                                duckRs.next() shouldBe true
+                                duckRs.getString("id") shouldBe "1"
+                                duckRs.getObject("name") shouldBe null
+                                duckRs.wasNull() shouldBe true
 
-                            // Row 2: id=2, name='Bob', score=NULL
-                            duckRs.next() shouldBe true
-                            duckRs.getString("name") shouldBe "Bob"
-                            duckRs.getObject("score") shouldBe null
-                            duckRs.wasNull() shouldBe true
+                                // Row 2: id=2, name='Bob', score=NULL
+                                duckRs.next() shouldBe true
+                                duckRs.getString("name") shouldBe "Bob"
+                                duckRs.getObject("score") shouldBe null
+                                duckRs.wasNull() shouldBe true
 
-                            // Row 3: id=NULL, name='Charlie', score=92.1
-                            duckRs.next() shouldBe true
-                            duckRs.getObject("id") shouldBe null
-                            duckRs.wasNull() shouldBe true
-                            duckRs.getString("name") shouldBe "Charlie"
+                                // Row 3: id=NULL, name='Charlie', score=92.1
+                                duckRs.next() shouldBe true
+                                duckRs.getObject("id") shouldBe null
+                                duckRs.wasNull() shouldBe true
+                                duckRs.getString("name") shouldBe "Charlie"
+                            }
                         }
+                    } finally {
+                        Files.deleteIfExists(tempParquet)
                     }
-
-                    Files.deleteIfExists(tempParquet)
                 }
             } finally {
                 Files.deleteIfExists(dbPath)
@@ -178,22 +184,24 @@ class DuckDbParquetWriterTest : DescribeSpec({
 
                     // Verify with DuckDB
                     val tempParquet = Files.createTempFile("verify-types-", ".parquet")
-                    Files.write(tempParquet, result.data)
+                    try {
+                        Files.write(tempParquet, result.data)
 
-                    DriverManager.getConnection("jdbc:duckdb:").use { duckConn ->
-                        duckConn.createStatement().use { duckStmt ->
-                            val duckRs = duckStmt.executeQuery(
-                                "SELECT * FROM '${tempParquet}'"
-                            )
-                            duckRs.next() shouldBe true
-                            duckRs.getString("int_col") shouldNotBe null
-                            duckRs.getString("text_col") shouldBe "hello"
-                            duckRs.getString("real_col") shouldNotBe null
-                            duckRs.getString("numeric_col") shouldNotBe null
+                        DriverManager.getConnection("jdbc:duckdb:").use { duckConn ->
+                            duckConn.createStatement().use { duckStmt ->
+                                val duckRs = duckStmt.executeQuery(
+                                    "SELECT * FROM '${tempParquet}'"
+                                )
+                                duckRs.next() shouldBe true
+                                duckRs.getString("int_col") shouldNotBe null
+                                duckRs.getString("text_col") shouldBe "hello"
+                                duckRs.getString("real_col") shouldNotBe null
+                                duckRs.getString("numeric_col") shouldNotBe null
+                            }
                         }
+                    } finally {
+                        Files.deleteIfExists(tempParquet)
                     }
-
-                    Files.deleteIfExists(tempParquet)
                 }
             } finally {
                 Files.deleteIfExists(dbPath)
