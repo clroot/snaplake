@@ -13,6 +13,11 @@ import java.sql.ResultSet
 @Component
 class DuckDbQueryEngine : QueryEngine {
 
+    /**
+     * Executes [viewSetupSql] statements before the user [sql] query.
+     * [viewSetupSql] must only contain internally-generated CREATE VIEW / CREATE SCHEMA statements.
+     * The [sql] parameter is independently validated to be a SELECT-only query.
+     */
     override fun executeQuery(
         sql: String,
         storageConfig: StorageConfig?,

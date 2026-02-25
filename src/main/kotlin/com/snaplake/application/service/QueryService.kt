@@ -74,19 +74,44 @@ class QueryService(
 
         for (table in defaultSnapshot.tables) {
             val uri = storageProvider.getUri(table.storagePath)
+            requireSafeUri(uri)
             sqls.add("""CREATE VIEW "${table.table}" AS SELECT * FROM '$uri'""")
         }
 
+        val aliases = context.additional.map { it.alias }
+        val duplicates = aliases.groupBy { it }.filter { it.value.size > 1 }.keys
+        require(duplicates.isEmpty()) { "Duplicate aliases: ${duplicates.joinToString()}" }
+
         for (aliased in context.additional) {
+            validateAlias(aliased.alias)
             val snapshot = loadSnapshotPort.findById(aliased.snapshotId)
                 ?: throw SnapshotNotFoundException(aliased.snapshotId)
             sqls.add("""CREATE SCHEMA "${aliased.alias}"""")
             for (table in snapshot.tables) {
                 val uri = storageProvider.getUri(table.storagePath)
+                requireSafeUri(uri)
                 sqls.add("""CREATE VIEW "${aliased.alias}"."${table.table}" AS SELECT * FROM '$uri'""")
             }
         }
 
         return sqls
+    }
+
+    companion object {
+        private val ALIAS_REGEX = Regex("^[a-z][a-z0-9_]{0,62}$")
+        private val RESERVED_ALIASES = setOf("main", "information_schema", "temp", "pg_catalog")
+
+        private fun validateAlias(alias: String) {
+            require(ALIAS_REGEX.matches(alias)) {
+                "Alias '$alias' must start with a lowercase letter and contain only lowercase letters, digits, and underscores"
+            }
+            require(alias !in RESERVED_ALIASES) {
+                "Alias '$alias' is a reserved schema name"
+            }
+        }
+
+        private fun requireSafeUri(uri: String) {
+            require("'" !in uri) { "Storage URI contains invalid characters: $uri" }
+        }
     }
 }
