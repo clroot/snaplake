@@ -1,6 +1,5 @@
 package com.snaplake.application.service
 
-import com.snaplake.adapter.outbound.database.ParquetWriter
 import com.snaplake.application.port.inbound.DeleteSnapshotUseCase
 import com.snaplake.application.port.inbound.GetSnapshotUseCase
 import com.snaplake.application.port.inbound.TakeSnapshotUseCase
@@ -26,6 +25,7 @@ class SnapshotService(
     private val storageProvider: StorageProvider,
     private val dialectRegistry: DatabaseDialectRegistry,
     private val encryptionPort: EncryptionPort,
+    private val parquetWritePort: ParquetWritePort,
 ) : TakeSnapshotUseCase, GetSnapshotUseCase, DeleteSnapshotUseCase {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -77,29 +77,27 @@ class SnapshotService(
                             val rs = conn.createStatement().executeQuery(
                                 "SELECT * FROM \"${table.schema}\".\"${table.name}\""
                             )
-                            val parquetBytes = ParquetWriter.writeResultSetToParquet(rs)
+                            val result = parquetWritePort.writeResultSetToParquet(rs)
                             rs.close()
 
                             val storagePath = buildStoragePath(
                                 datasource.name, snapshotType, snapshotDate, table.schema, table.name,
                             )
-                            storageProvider.write(storagePath, parquetBytes)
-
-                            val rowCount = countRows(conn, table.schema, table.name)
+                            storageProvider.write(storagePath, result.data)
 
                             snapshot.addTable(
                                 TableMeta(
                                     schema = table.schema,
                                     table = table.name,
-                                    rowCount = rowCount,
-                                    sizeBytes = parquetBytes.size.toLong(),
+                                    rowCount = result.rowCount,
+                                    sizeBytes = result.data.size.toLong(),
                                     storagePath = storagePath,
                                 )
                             )
 
                             log.info(
                                 "Snapshot table {}.{}: {} rows, {} bytes",
-                                table.schema, table.name, rowCount, parquetBytes.size,
+                                table.schema, table.name, result.rowCount, result.data.size,
                             )
                         } catch (e: Exception) {
                             log.error(
@@ -176,18 +174,6 @@ class SnapshotService(
         table: String,
     ): String {
         return "$datasourceName/${snapshotType.name.lowercase()}/$snapshotDate/$schema.$table.parquet"
-    }
-
-    private fun countRows(conn: java.sql.Connection, schema: String, table: String): Long {
-        return try {
-            conn.createStatement().use { stmt ->
-                stmt.executeQuery("SELECT COUNT(*) FROM \"$schema\".\"$table\"").use { rs ->
-                    if (rs.next()) rs.getLong(1) else 0L
-                }
-            }
-        } catch (e: Exception) {
-            0L
-        }
     }
 
     private fun copyToMonthly(datasource: Datasource, dailySnapshot: SnapshotMeta, date: LocalDate) {

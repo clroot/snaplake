@@ -12,7 +12,6 @@ import io.kotest.matchers.shouldBe
 import io.mockk.*
 import java.sql.Connection
 import java.sql.ResultSet
-import java.sql.ResultSetMetaData
 import java.sql.Statement
 import java.time.Instant
 
@@ -24,10 +23,11 @@ class SnapshotServiceTest : DescribeSpec({
     val storageProvider = mockk<StorageProvider>(relaxed = true)
     val dialectRegistry = mockk<DatabaseDialectRegistry>()
     val encryptionPort = mockk<EncryptionPort>()
+    val parquetWritePort = mockk<ParquetWritePort>()
 
     val sut = SnapshotService(
         loadDatasourcePort, saveSnapshotPort, loadSnapshotPort,
-        storageProvider, dialectRegistry, encryptionPort,
+        storageProvider, dialectRegistry, encryptionPort, parquetWritePort,
     )
 
     beforeTest {
@@ -99,7 +99,6 @@ class SnapshotServiceTest : DescribeSpec({
                 val conn = mockk<Connection>()
                 val stmt = mockk<Statement>()
                 val rs = mockk<ResultSet>()
-                val rsMeta = mockk<ResultSetMetaData>()
 
                 every { loadDatasourcePort.findById(datasourceId) } returns datasource
                 every { loadSnapshotPort.findByDatasourceIdAndStatus(datasourceId, SnapshotStatus.RUNNING) } returns null
@@ -109,24 +108,10 @@ class SnapshotServiceTest : DescribeSpec({
                 every { dialect.listTables(conn, "public") } returns listOf(TableInfo("public", "users"))
                 every { conn.createStatement() } returns stmt
 
-                // SELECT * result for parquet
                 every { stmt.executeQuery(match { it.contains("SELECT *") }) } returns rs
-                every { rs.metaData } returns rsMeta
-                every { rsMeta.columnCount } returns 1
-                every { rsMeta.getColumnLabel(1) } returns "id"
-                every { rsMeta.getColumnType(1) } returns java.sql.Types.INTEGER
-                every { rsMeta.isNullable(1) } returns java.sql.ResultSetMetaData.columnNullable
-                every { rs.next() } returnsMany listOf(true, false)
-                every { rs.getObject(1) } returns 1
                 every { rs.close() } just Runs
-
-                // COUNT result
-                val countRs = mockk<ResultSet>()
-                every { stmt.executeQuery(match { it.contains("COUNT") }) } returns countRs
-                every { countRs.next() } returns true
-                every { countRs.getLong(1) } returns 1L
-                every { countRs.close() } just Runs
-                every { stmt.close() } just Runs
+                every { parquetWritePort.writeResultSetToParquet(rs) } returns
+                    ParquetWriteResult(data = byteArrayOf(1, 2, 3), rowCount = 1)
 
                 every { conn.close() } just Runs
                 every { storageProvider.write(any(), any()) } just Runs
@@ -136,6 +121,8 @@ class SnapshotServiceTest : DescribeSpec({
                 result.status shouldBe SnapshotStatus.COMPLETED
                 result.tables.size shouldBe 1
                 result.tables[0].table shouldBe "users"
+                result.tables[0].rowCount shouldBe 1
+                result.tables[0].sizeBytes shouldBe 3L
                 verify { storageProvider.write(any(), any()) }
             }
         }
