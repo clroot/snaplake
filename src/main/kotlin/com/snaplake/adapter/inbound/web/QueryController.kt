@@ -3,6 +3,7 @@ package com.snaplake.adapter.inbound.web
 import com.snaplake.adapter.inbound.web.dto.ColumnSchemaResponse
 import com.snaplake.adapter.inbound.web.dto.ExecuteQueryRequest
 import com.snaplake.adapter.inbound.web.dto.QueryResultResponse
+import com.snaplake.adapter.inbound.web.dto.SnapshotSchemaResponse
 import com.snaplake.application.port.inbound.DescribeTableUseCase
 import com.snaplake.application.port.inbound.ExecuteQueryUseCase
 import com.snaplake.application.port.inbound.PreviewTableUseCase
@@ -39,6 +40,14 @@ class QueryController(
             )
         )
         return ResponseEntity.ok(QueryResultResponse.from(result))
+    }
+
+    @GetMapping("/snapshots/{snapshotId}/schema")
+    fun describeAllTables(
+        @PathVariable snapshotId: String,
+    ): ResponseEntity<SnapshotSchemaResponse> {
+        val schema = describeTableUseCase.describeAll(SnapshotId(snapshotId))
+        return ResponseEntity.ok(SnapshotSchemaResponse.from(schema))
     }
 
     @GetMapping("/snapshots/{snapshotId}/tables/{tableName}/schema")

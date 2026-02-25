@@ -44,3 +44,16 @@ data class ColumnSchemaResponse(
         )
     }
 }
+
+data class SnapshotSchemaResponse(
+    val tables: Map<String, List<ColumnSchemaResponse>>,
+) {
+    companion object {
+        fun from(schema: Map<String, List<ColumnSchema>>): SnapshotSchemaResponse =
+            SnapshotSchemaResponse(
+                tables = schema.mapValues { (_, columns) ->
+                    columns.map { ColumnSchemaResponse.from(it) }
+                },
+            )
+    }
+}

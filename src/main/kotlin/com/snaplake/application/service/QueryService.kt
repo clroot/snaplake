@@ -46,6 +46,17 @@ class QueryService(
         return queryEngine.describeTable(uri, storageConfig)
     }
 
+    override fun describeAll(snapshotId: SnapshotId): Map<String, List<ColumnSchema>> {
+        val snapshot = loadSnapshotPort.findById(snapshotId)
+            ?: throw SnapshotNotFoundException(snapshotId)
+
+        val storageConfig = loadStorageConfigPort.find()
+        return snapshot.tables.associate { table ->
+            val uri = storageProvider.getUri(table.storagePath)
+            table.table to queryEngine.describeTable(uri, storageConfig)
+        }
+    }
+
     override fun preview(command: PreviewTableUseCase.Command): QueryResult {
         val snapshot = loadSnapshotPort.findById(command.snapshotId)
             ?: throw SnapshotNotFoundException(command.snapshotId)

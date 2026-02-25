@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react"
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useState, useCallback, useMemo } from "react"
+import { useMutation, useQueries, useQuery } from "@tanstack/react-query"
 import { useSearch } from "@tanstack/react-router"
 import { api } from "@/lib/api"
 import { Button } from "@/components/ui/button"
@@ -82,6 +82,41 @@ export function QueryPage() {
     setContext(buildInitialContext(initialSnapshot))
     setSqlText(buildInitialSql(initialSnapshot))
   }
+
+  // Fetch schema for each selected snapshot (for autocomplete)
+  const validEntries = useMemo(
+    () => context.entries.filter((e) => e.snapshotId),
+    [context.entries],
+  )
+  const schemaData = useQueries({
+    queries: validEntries.map((entry) => ({
+      queryKey: ["snapshotSchema", entry.snapshotId],
+      queryFn: () =>
+        api.get<{ tables: Record<string, { name: string }[]> }>(
+          `/api/snapshots/${entry.snapshotId}/schema`,
+        ),
+      staleTime: Infinity,
+    })),
+    combine: (results) => results.map((r) => r.data),
+  })
+
+  const editorTables = useMemo(() => {
+    const tables: Record<string, string[]> = {}
+    for (let i = 0; i < validEntries.length; i++) {
+      const data = schemaData[i]
+      if (!data) continue
+      const alias = validEntries[i].alias
+      for (const [tableName, columns] of Object.entries(data.tables)) {
+        const columnNames = columns.map((c) => c.name)
+        tables[`${alias}.${tableName}`] = columnNames
+        // 단일 스냅샷이면 alias 없이도 접근 가능
+        if (validEntries.length === 1) {
+          tables[tableName] = columnNames
+        }
+      }
+    }
+    return Object.keys(tables).length > 0 ? tables : undefined
+  }, [validEntries, schemaData])
 
   const executeMutation = useMutation({
     mutationFn: async (params: { sql: string; offset: number }) => {
@@ -225,6 +260,7 @@ export function QueryPage() {
               value={sqlText}
               onChange={setSqlText}
               onExecute={handleExecute}
+              tables={editorTables}
             />
           )}
         </div>

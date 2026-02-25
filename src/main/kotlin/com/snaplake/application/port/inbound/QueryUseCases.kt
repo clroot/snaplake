@@ -26,6 +26,7 @@ interface ExecuteQueryUseCase {
 
 interface DescribeTableUseCase {
     fun describe(snapshotId: SnapshotId, tableName: String): List<ColumnSchema>
+    fun describeAll(snapshotId: SnapshotId): Map<String, List<ColumnSchema>>
 }
 
 interface PreviewTableUseCase {
