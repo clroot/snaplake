@@ -21,11 +21,10 @@ class QueryController(
     fun executeQuery(@RequestBody request: ExecuteQueryRequest): ResponseEntity<QueryResultResponse> {
         val context = request.context?.let { ctx ->
             ExecuteQueryUseCase.SnapshotContext(
-                default = SnapshotId(ctx.default),
-                additional = ctx.additional.map { aliased ->
+                snapshots = ctx.snapshots.map { entry ->
                     ExecuteQueryUseCase.AliasedSnapshot(
-                        snapshotId = SnapshotId(aliased.snapshotId),
-                        alias = aliased.alias,
+                        snapshotId = SnapshotId(entry.snapshotId),
+                        alias = entry.alias,
                     )
                 },
             )

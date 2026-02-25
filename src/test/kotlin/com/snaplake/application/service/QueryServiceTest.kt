@@ -65,10 +65,10 @@ class QueryServiceTest : DescribeSpec({
         }
 
         context("context가 있는 경우") {
-            it("default 스냅샷의 테이블들을 VIEW로 생성하는 SQL을 전달한다") {
-                val defaultSnapshotId = SnapshotId("snap-default")
+            it("단일 스냅샷이면 alias 스키마와 루트 뷰를 모두 생성한다") {
+                val snapshotId = SnapshotId("snap-default")
                 val snapshot = createTestSnapshot(
-                    id = defaultSnapshotId,
+                    id = snapshotId,
                     tables = listOf(
                         TableMeta("public", "users", 100, 1024, "snapshots/users.parquet"),
                         TableMeta("public", "orders", 50, 512, "snapshots/orders.parquet"),
@@ -77,7 +77,7 @@ class QueryServiceTest : DescribeSpec({
                 val viewSetupSqlSlot = slot<List<String>>()
 
                 every { loadStorageConfigPort.find() } returns null
-                every { loadSnapshotPort.findById(defaultSnapshotId) } returns snapshot
+                every { loadSnapshotPort.findById(snapshotId) } returns snapshot
                 every { storageProvider.getUri("snapshots/users.parquet") } returns "/data/snapshots/users.parquet"
                 every { storageProvider.getUri("snapshots/orders.parquet") } returns "/data/snapshots/orders.parquet"
                 every {
@@ -93,30 +93,38 @@ class QueryServiceTest : DescribeSpec({
                 val command = ExecuteQueryUseCase.Command(
                     sql = "SELECT * FROM users",
                     context = ExecuteQueryUseCase.SnapshotContext(
-                        default = defaultSnapshotId,
+                        snapshots = listOf(
+                            ExecuteQueryUseCase.AliasedSnapshot(
+                                snapshotId = snapshotId,
+                                alias = "current",
+                            ),
+                        ),
                     ),
                 )
 
                 sut.executeQuery(command)
 
                 val captured = viewSetupSqlSlot.captured
-                captured shouldHaveSize 2
+                captured shouldHaveSize 5
+                captured shouldContain """CREATE SCHEMA "current""""
+                captured shouldContain """CREATE VIEW "current"."users" AS SELECT * FROM '/data/snapshots/users.parquet'"""
+                captured shouldContain """CREATE VIEW "current"."orders" AS SELECT * FROM '/data/snapshots/orders.parquet'"""
                 captured shouldContain """CREATE VIEW "users" AS SELECT * FROM '/data/snapshots/users.parquet'"""
                 captured shouldContain """CREATE VIEW "orders" AS SELECT * FROM '/data/snapshots/orders.parquet'"""
             }
 
-            it("additional 스냅샷은 SCHEMA + VIEW를 생성한다") {
-                val defaultSnapshotId = SnapshotId("snap-default")
-                val additionalSnapshotId = SnapshotId("snap-prev")
+            it("복수 스냅샷이면 alias 스키마만 생성하고 루트 뷰는 없다") {
+                val snap1Id = SnapshotId("snap-current")
+                val snap2Id = SnapshotId("snap-prev")
 
-                val defaultSnapshot = createTestSnapshot(
-                    id = defaultSnapshotId,
+                val snap1 = createTestSnapshot(
+                    id = snap1Id,
                     tables = listOf(
                         TableMeta("public", "users", 100, 1024, "snap1/users.parquet"),
                     ),
                 )
-                val additionalSnapshot = createTestSnapshot(
-                    id = additionalSnapshotId,
+                val snap2 = createTestSnapshot(
+                    id = snap2Id,
                     tables = listOf(
                         TableMeta("public", "users", 80, 900, "snap2/users.parquet"),
                         TableMeta("public", "orders", 40, 400, "snap2/orders.parquet"),
@@ -125,8 +133,8 @@ class QueryServiceTest : DescribeSpec({
                 val viewSetupSqlSlot = slot<List<String>>()
 
                 every { loadStorageConfigPort.find() } returns null
-                every { loadSnapshotPort.findById(defaultSnapshotId) } returns defaultSnapshot
-                every { loadSnapshotPort.findById(additionalSnapshotId) } returns additionalSnapshot
+                every { loadSnapshotPort.findById(snap1Id) } returns snap1
+                every { loadSnapshotPort.findById(snap2Id) } returns snap2
                 every { storageProvider.getUri("snap1/users.parquet") } returns "/data/snap1/users.parquet"
                 every { storageProvider.getUri("snap2/users.parquet") } returns "/data/snap2/users.parquet"
                 every { storageProvider.getUri("snap2/orders.parquet") } returns "/data/snap2/orders.parquet"
@@ -141,12 +149,15 @@ class QueryServiceTest : DescribeSpec({
                 } returns emptyQueryResult
 
                 val command = ExecuteQueryUseCase.Command(
-                    sql = "SELECT * FROM users EXCEPT SELECT * FROM prev.users",
+                    sql = "SELECT * FROM current.users EXCEPT SELECT * FROM prev.users",
                     context = ExecuteQueryUseCase.SnapshotContext(
-                        default = defaultSnapshotId,
-                        additional = listOf(
+                        snapshots = listOf(
                             ExecuteQueryUseCase.AliasedSnapshot(
-                                snapshotId = additionalSnapshotId,
+                                snapshotId = snap1Id,
+                                alias = "current",
+                            ),
+                            ExecuteQueryUseCase.AliasedSnapshot(
+                                snapshotId = snap2Id,
                                 alias = "prev",
                             ),
                         ),
@@ -156,14 +167,15 @@ class QueryServiceTest : DescribeSpec({
                 sut.executeQuery(command)
 
                 val captured = viewSetupSqlSlot.captured
-                captured shouldHaveSize 4
-                captured shouldContain """CREATE VIEW "users" AS SELECT * FROM '/data/snap1/users.parquet'"""
+                captured shouldHaveSize 5
+                captured shouldContain """CREATE SCHEMA "current""""
+                captured shouldContain """CREATE VIEW "current"."users" AS SELECT * FROM '/data/snap1/users.parquet'"""
                 captured shouldContain """CREATE SCHEMA "prev""""
                 captured shouldContain """CREATE VIEW "prev"."users" AS SELECT * FROM '/data/snap2/users.parquet'"""
                 captured shouldContain """CREATE VIEW "prev"."orders" AS SELECT * FROM '/data/snap2/orders.parquet'"""
             }
 
-            it("존재하지 않는 default 스냅샷이면 SnapshotNotFoundException을 던진다") {
+            it("존재하지 않는 스냅샷이면 SnapshotNotFoundException을 던진다") {
                 val missingSnapshotId = SnapshotId("snap-missing")
 
                 every { loadStorageConfigPort.find() } returns null
@@ -172,39 +184,10 @@ class QueryServiceTest : DescribeSpec({
                 val command = ExecuteQueryUseCase.Command(
                     sql = "SELECT 1",
                     context = ExecuteQueryUseCase.SnapshotContext(
-                        default = missingSnapshotId,
-                    ),
-                )
-
-                shouldThrow<SnapshotNotFoundException> {
-                    sut.executeQuery(command)
-                }
-            }
-
-            it("존재하지 않는 additional 스냅샷이면 SnapshotNotFoundException을 던진다") {
-                val defaultSnapshotId = SnapshotId("snap-default")
-                val missingAdditionalId = SnapshotId("snap-missing-additional")
-
-                val defaultSnapshot = createTestSnapshot(
-                    id = defaultSnapshotId,
-                    tables = listOf(
-                        TableMeta("public", "users", 100, 1024, "snap1/users.parquet"),
-                    ),
-                )
-
-                every { loadStorageConfigPort.find() } returns null
-                every { loadSnapshotPort.findById(defaultSnapshotId) } returns defaultSnapshot
-                every { loadSnapshotPort.findById(missingAdditionalId) } returns null
-                every { storageProvider.getUri("snap1/users.parquet") } returns "/data/snap1/users.parquet"
-
-                val command = ExecuteQueryUseCase.Command(
-                    sql = "SELECT 1",
-                    context = ExecuteQueryUseCase.SnapshotContext(
-                        default = defaultSnapshotId,
-                        additional = listOf(
+                        snapshots = listOf(
                             ExecuteQueryUseCase.AliasedSnapshot(
-                                snapshotId = missingAdditionalId,
-                                alias = "prev",
+                                snapshotId = missingSnapshotId,
+                                alias = "current",
                             ),
                         ),
                     ),
@@ -216,28 +199,17 @@ class QueryServiceTest : DescribeSpec({
             }
 
             it("중복된 alias가 있으면 IllegalArgumentException을 던진다") {
-                val defaultSnapshotId = SnapshotId("snap-default")
-                val additional1 = SnapshotId("snap-a")
-                val additional2 = SnapshotId("snap-b")
-
-                val defaultSnapshot = createTestSnapshot(
-                    id = defaultSnapshotId,
-                    tables = listOf(
-                        TableMeta("public", "users", 100, 1024, "snap1/users.parquet"),
-                    ),
-                )
+                val snap1 = SnapshotId("snap-a")
+                val snap2 = SnapshotId("snap-b")
 
                 every { loadStorageConfigPort.find() } returns null
-                every { loadSnapshotPort.findById(defaultSnapshotId) } returns defaultSnapshot
-                every { storageProvider.getUri("snap1/users.parquet") } returns "/data/snap1/users.parquet"
 
                 val command = ExecuteQueryUseCase.Command(
                     sql = "SELECT 1",
                     context = ExecuteQueryUseCase.SnapshotContext(
-                        default = defaultSnapshotId,
-                        additional = listOf(
-                            ExecuteQueryUseCase.AliasedSnapshot(snapshotId = additional1, alias = "prev"),
-                            ExecuteQueryUseCase.AliasedSnapshot(snapshotId = additional2, alias = "prev"),
+                        snapshots = listOf(
+                            ExecuteQueryUseCase.AliasedSnapshot(snapshotId = snap1, alias = "prev"),
+                            ExecuteQueryUseCase.AliasedSnapshot(snapshotId = snap2, alias = "prev"),
                         ),
                     ),
                 )
@@ -248,26 +220,15 @@ class QueryServiceTest : DescribeSpec({
             }
 
             it("유효하지 않은 alias 형식이면 IllegalArgumentException을 던진다") {
-                val defaultSnapshotId = SnapshotId("snap-default")
-                val additionalId = SnapshotId("snap-a")
-
-                val defaultSnapshot = createTestSnapshot(
-                    id = defaultSnapshotId,
-                    tables = listOf(
-                        TableMeta("public", "users", 100, 1024, "snap1/users.parquet"),
-                    ),
-                )
+                val snapId = SnapshotId("snap-a")
 
                 every { loadStorageConfigPort.find() } returns null
-                every { loadSnapshotPort.findById(defaultSnapshotId) } returns defaultSnapshot
-                every { storageProvider.getUri("snap1/users.parquet") } returns "/data/snap1/users.parquet"
 
                 val command = ExecuteQueryUseCase.Command(
                     sql = "SELECT 1",
                     context = ExecuteQueryUseCase.SnapshotContext(
-                        default = defaultSnapshotId,
-                        additional = listOf(
-                            ExecuteQueryUseCase.AliasedSnapshot(snapshotId = additionalId, alias = "Invalid-Alias!"),
+                        snapshots = listOf(
+                            ExecuteQueryUseCase.AliasedSnapshot(snapshotId = snapId, alias = "Invalid-Alias!"),
                         ),
                     ),
                 )
@@ -278,26 +239,15 @@ class QueryServiceTest : DescribeSpec({
             }
 
             it("예약된 alias를 사용하면 IllegalArgumentException을 던진다") {
-                val defaultSnapshotId = SnapshotId("snap-default")
-                val additionalId = SnapshotId("snap-a")
-
-                val defaultSnapshot = createTestSnapshot(
-                    id = defaultSnapshotId,
-                    tables = listOf(
-                        TableMeta("public", "users", 100, 1024, "snap1/users.parquet"),
-                    ),
-                )
+                val snapId = SnapshotId("snap-a")
 
                 every { loadStorageConfigPort.find() } returns null
-                every { loadSnapshotPort.findById(defaultSnapshotId) } returns defaultSnapshot
-                every { storageProvider.getUri("snap1/users.parquet") } returns "/data/snap1/users.parquet"
 
                 val command = ExecuteQueryUseCase.Command(
                     sql = "SELECT 1",
                     context = ExecuteQueryUseCase.SnapshotContext(
-                        default = defaultSnapshotId,
-                        additional = listOf(
-                            ExecuteQueryUseCase.AliasedSnapshot(snapshotId = additionalId, alias = "main"),
+                        snapshots = listOf(
+                            ExecuteQueryUseCase.AliasedSnapshot(snapshotId = snapId, alias = "main"),
                         ),
                     ),
                 )

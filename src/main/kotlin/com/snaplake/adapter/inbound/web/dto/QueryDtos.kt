@@ -11,11 +11,10 @@ data class ExecuteQueryRequest(
 )
 
 data class SnapshotContextRequest(
-    val default: String,
-    val additional: List<AliasedSnapshotRequest> = emptyList(),
+    val snapshots: List<SnapshotEntryRequest>,
 )
 
-data class AliasedSnapshotRequest(
+data class SnapshotEntryRequest(
     val snapshotId: String,
     val alias: String,
 )

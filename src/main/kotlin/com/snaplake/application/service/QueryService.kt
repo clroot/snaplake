@@ -69,28 +69,30 @@ class QueryService(
     private fun buildViewSetupSql(context: ExecuteQueryUseCase.SnapshotContext): List<String> {
         val sqls = mutableListOf<String>()
 
-        val defaultSnapshot = loadSnapshotPort.findById(context.default)
-            ?: throw SnapshotNotFoundException(context.default)
-
-        for (table in defaultSnapshot.tables) {
-            val uri = storageProvider.getUri(table.storagePath)
-            requireSafeUri(uri)
-            sqls.add("""CREATE VIEW "${table.table}" AS SELECT * FROM '$uri'""")
-        }
-
-        val aliases = context.additional.map { it.alias }
+        val aliases = context.snapshots.map { it.alias }
         val duplicates = aliases.groupBy { it }.filter { it.value.size > 1 }.keys
         require(duplicates.isEmpty()) { "Duplicate aliases: ${duplicates.joinToString()}" }
 
-        for (aliased in context.additional) {
-            validateAlias(aliased.alias)
-            val snapshot = loadSnapshotPort.findById(aliased.snapshotId)
-                ?: throw SnapshotNotFoundException(aliased.snapshotId)
-            sqls.add("""CREATE SCHEMA "${aliased.alias}"""")
+        for (entry in context.snapshots) {
+            validateAlias(entry.alias)
+            val snapshot = loadSnapshotPort.findById(entry.snapshotId)
+                ?: throw SnapshotNotFoundException(entry.snapshotId)
+
+            sqls.add("""CREATE SCHEMA "${entry.alias}"""")
             for (table in snapshot.tables) {
                 val uri = storageProvider.getUri(table.storagePath)
                 requireSafeUri(uri)
-                sqls.add("""CREATE VIEW "${aliased.alias}"."${table.table}" AS SELECT * FROM '$uri'""")
+                sqls.add("""CREATE VIEW "${entry.alias}"."${table.table}" AS SELECT * FROM '$uri'""")
+            }
+        }
+
+        // 단일 스냅샷이면 루트 뷰도 생성 (prefix 없이 접근 가능)
+        if (context.snapshots.size == 1) {
+            val snapshot = loadSnapshotPort.findById(context.snapshots[0].snapshotId)!!
+            for (table in snapshot.tables) {
+                val uri = storageProvider.getUri(table.storagePath)
+                requireSafeUri(uri)
+                sqls.add("""CREATE VIEW "${table.table}" AS SELECT * FROM '$uri'""")
             }
         }
 

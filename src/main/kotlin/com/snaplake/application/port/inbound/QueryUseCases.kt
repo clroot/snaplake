@@ -15,8 +15,7 @@ interface ExecuteQueryUseCase {
     )
 
     data class SnapshotContext(
-        val default: SnapshotId,
-        val additional: List<AliasedSnapshot> = emptyList(),
+        val snapshots: List<AliasedSnapshot>,
     )
 
     data class AliasedSnapshot(
