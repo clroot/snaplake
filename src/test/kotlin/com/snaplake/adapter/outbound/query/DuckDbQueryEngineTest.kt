@@ -69,6 +69,58 @@ class DuckDbQueryEngineTest : DescribeSpec({
         }
     }
 
+    describe("executeQuery with viewSetupSql") {
+        it("VIEW를 통해 테이블 이름으로 쿼리할 수 있다") {
+            val tempParquet = createTestParquet()
+            try {
+                val uri = tempParquet.toAbsolutePath()
+                val viewSetupSql = listOf(
+                    """CREATE VIEW "test_data" AS SELECT * FROM '$uri'""",
+                )
+
+                val result = engine.executeQuery(
+                    sql = "SELECT * FROM test_data",
+                    storageConfig = null,
+                    viewSetupSql = viewSetupSql,
+                )
+                result.rows shouldHaveSize 3
+                result.columns.any { it.name == "id" } shouldBe true
+            } finally {
+                Files.deleteIfExists(tempParquet)
+            }
+        }
+
+        it("SCHEMA를 통해 alias.table 형태로 쿼리할 수 있다") {
+            val tempParquet = createTestParquet()
+            try {
+                val uri = tempParquet.toAbsolutePath()
+                val viewSetupSql = listOf(
+                    """CREATE VIEW "test_data" AS SELECT * FROM '$uri'""",
+                    """CREATE SCHEMA "s2"""",
+                    """CREATE VIEW "s2"."test_data" AS SELECT * FROM '$uri'""",
+                )
+
+                val result = engine.executeQuery(
+                    sql = "SELECT a.id, b.name FROM test_data a JOIN s2.test_data b ON a.id = b.id",
+                    storageConfig = null,
+                    viewSetupSql = viewSetupSql,
+                )
+                result.rows shouldHaveSize 3
+            } finally {
+                Files.deleteIfExists(tempParquet)
+            }
+        }
+
+        it("viewSetupSql이 비어있으면 기존처럼 동작한다") {
+            val result = engine.executeQuery(
+                sql = "SELECT 1 as val",
+                storageConfig = null,
+                viewSetupSql = emptyList(),
+            )
+            result.rows shouldHaveSize 1
+        }
+    }
+
     describe("countRows") {
         it("Parquet 파일의 행 수를 반환한다") {
             val tempParquet = createTestParquet()
