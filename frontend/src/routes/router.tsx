@@ -138,6 +138,9 @@ const queryRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: "/query",
   component: QueryPage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    snapshotId: (search.snapshotId as string) || undefined,
+  }),
 })
 
 // Compare

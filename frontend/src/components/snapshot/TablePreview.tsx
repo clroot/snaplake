@@ -16,7 +16,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 import { exportToCsv, exportToJson } from "@/lib/export"
-import { Filter } from "lucide-react"
+import { Filter, SquareTerminal } from "lucide-react"
+import { useNavigate } from "@tanstack/react-router"
 
 interface QueryResult {
   columns: Column[]
@@ -44,6 +45,7 @@ function formatCellValue(value: unknown): string {
 }
 
 export function TablePreview({ snapshotId, tableName }: TablePreviewProps) {
+  const navigate = useNavigate()
   const [page, setPage] = useState(0)
   const [sortColumn, setSortColumn] = useState<string | undefined>()
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
@@ -116,6 +118,19 @@ export function TablePreview({ snapshotId, tableName }: TablePreviewProps) {
     <div className="min-w-0 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">{tableName}</h2>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            navigate({
+              to: "/query",
+              search: { snapshotId },
+            })
+          }}
+        >
+          <SquareTerminal className="mr-1 h-3 w-3" />
+          Open in Query
+        </Button>
       </div>
 
       {/* Filters */}

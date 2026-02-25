@@ -1,22 +1,25 @@
 import { useState, useCallback } from "react"
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
+import { useSearch } from "@tanstack/react-router"
 import { api } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { QueryEditor } from "@/components/query/QueryEditor"
 import { QueryResult } from "@/components/query/QueryResult"
+import { SnapshotContextPanel } from "@/components/query/SnapshotContextPanel"
+import {
+  type SnapshotContextState,
+  type SnapshotResponse,
+  formatSnapshotLabel,
+  getTableNames,
+} from "@/components/query/snapshot-context-utils"
 import {
   addQueryHistory,
   getQueryHistory,
   clearQueryHistory,
   type QueryHistoryEntry,
 } from "@/lib/query-history"
-import {
-  Clock,
-  Loader2,
-  Play,
-  Trash2,
-} from "lucide-react"
+import { Clock, Loader2, Play, Trash2 } from "lucide-react"
 
 interface Column {
   name: string
@@ -31,7 +34,27 @@ interface QueryResultData {
 
 const PAGE_SIZE = 100
 
+function buildInitialContext(snap: SnapshotResponse): SnapshotContextState {
+  return {
+    default: {
+      datasourceId: snap.datasourceId,
+      snapshotId: snap.id,
+      snapshotLabel: formatSnapshotLabel(snap),
+      tables: getTableNames(snap),
+    },
+    additional: [],
+  }
+}
+
+function buildInitialSql(snap: SnapshotResponse): string {
+  const firstTable = getTableNames(snap)[0]
+  return firstTable ? `SELECT * FROM ${firstTable}` : ""
+}
+
 export function QueryPage() {
+  const { snapshotId: initialSnapshotId } = useSearch({
+    from: "/authenticated/query",
+  })
   const [sqlText, setSqlText] = useState("")
   const [page, setPage] = useState(0)
   const [result, setResult] = useState<QueryResultData | null>(null)
@@ -39,14 +62,49 @@ export function QueryPage() {
   const [error, setError] = useState<string | null>(null)
   const [showHistory, setShowHistory] = useState(false)
   const [history, setHistory] = useState<QueryHistoryEntry[]>(getQueryHistory)
+  const [context, setContext] = useState<SnapshotContextState>({
+    default: null,
+    additional: [],
+  })
+  const [defaultDatasourceId, setDefaultDatasourceId] = useState("")
+  const [initialized, setInitialized] = useState(false)
+
+  // Fetch initial snapshot and auto-configure context
+  const { data: initialSnapshot } = useQuery({
+    queryKey: ["snapshot", initialSnapshotId],
+    queryFn: () =>
+      api.get<SnapshotResponse>(`/api/snapshots/${initialSnapshotId}`),
+    enabled: !!initialSnapshotId && !initialized,
+  })
+
+  // Initialize context from fetched snapshot (runs once)
+  if (initialSnapshot && !initialized) {
+    setInitialized(true)
+    setDefaultDatasourceId(initialSnapshot.datasourceId)
+    setContext(buildInitialContext(initialSnapshot))
+    setSqlText(buildInitialSql(initialSnapshot))
+  }
 
   const executeMutation = useMutation({
     mutationFn: async (params: { sql: string; offset: number }) => {
+      const apiContext = context.default
+        ? {
+            default: context.default.snapshotId,
+            additional: context.additional
+              .filter((a) => a.snapshotId)
+              .map((a) => ({
+                snapshotId: a.snapshotId,
+                alias: a.alias,
+              })),
+          }
+        : undefined
+
       const start = performance.now()
       const data = await api.post<QueryResultData>("/api/query", {
         sql: params.sql,
         limit: PAGE_SIZE,
         offset: params.offset,
+        context: apiContext,
       })
       const duration = performance.now() - start
       return { data, duration }
@@ -94,8 +152,19 @@ export function QueryPage() {
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] -m-6 flex-col">
+      {/* Context Panel */}
+      <SnapshotContextPanel
+        context={context}
+        onContextChange={setContext}
+        defaultDatasourceId={defaultDatasourceId}
+        onDefaultDatasourceIdChange={setDefaultDatasourceId}
+      />
+
       {/* Editor area */}
-      <div className="flex shrink-0 flex-col border-b" style={{ height: "40%" }}>
+      <div
+        className="flex shrink-0 flex-col border-b"
+        style={{ height: "40%" }}
+      >
         <div className="flex items-center justify-between border-b px-4 py-2">
           <h1 className="text-lg font-semibold">SQL Query</h1>
           <div className="flex items-center gap-2">
@@ -126,7 +195,11 @@ export function QueryPage() {
             <div className="h-full overflow-auto p-4">
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="font-medium">Query History</h3>
-                <Button variant="ghost" size="sm" onClick={handleClearHistory}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearHistory}
+                >
                   <Trash2 className="mr-1 h-3 w-3" />
                   Clear
                 </Button>
