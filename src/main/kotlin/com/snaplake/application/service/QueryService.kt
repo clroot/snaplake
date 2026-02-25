@@ -73,26 +73,31 @@ class QueryService(
         val duplicates = aliases.groupBy { it }.filter { it.value.size > 1 }.keys
         require(duplicates.isEmpty()) { "Duplicate aliases: ${duplicates.joinToString()}" }
 
+        data class ResolvedTable(val tableName: String, val uri: String)
+        val resolvedSnapshots = mutableListOf<List<ResolvedTable>>()
+
         for (entry in context.snapshots) {
             validateAlias(entry.alias)
             val snapshot = loadSnapshotPort.findById(entry.snapshotId)
                 ?: throw SnapshotNotFoundException(entry.snapshotId)
 
-            sqls.add("""CREATE SCHEMA "${entry.alias}"""")
-            for (table in snapshot.tables) {
+            val tables = snapshot.tables.map { table ->
                 val uri = storageProvider.getUri(table.storagePath)
                 requireSafeUri(uri)
-                sqls.add("""CREATE VIEW "${entry.alias}"."${table.table}" AS SELECT * FROM '$uri'""")
+                ResolvedTable(table.table, uri)
+            }
+            resolvedSnapshots.add(tables)
+
+            sqls.add("""CREATE SCHEMA "${entry.alias}"""")
+            for (table in tables) {
+                sqls.add("""CREATE VIEW "${entry.alias}"."${table.tableName}" AS SELECT * FROM '${table.uri}'""")
             }
         }
 
         // 단일 스냅샷이면 루트 뷰도 생성 (prefix 없이 접근 가능)
-        if (context.snapshots.size == 1) {
-            val snapshot = loadSnapshotPort.findById(context.snapshots[0].snapshotId)!!
-            for (table in snapshot.tables) {
-                val uri = storageProvider.getUri(table.storagePath)
-                requireSafeUri(uri)
-                sqls.add("""CREATE VIEW "${table.table}" AS SELECT * FROM '$uri'""")
+        if (resolvedSnapshots.size == 1) {
+            for (table in resolvedSnapshots[0]) {
+                sqls.add("""CREATE VIEW "${table.tableName}" AS SELECT * FROM '${table.uri}'""")
             }
         }
 
