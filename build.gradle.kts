@@ -81,7 +81,9 @@ tasks.withType<Jar> {
 
 tasks.register<Exec>("buildFrontend") {
     workingDir = file("frontend")
-    commandLine("bun", "run", "build")
+    val bun = File(System.getProperty("user.home"), ".bun/bin/bun")
+        .takeIf { it.exists() }?.absolutePath ?: "bun"
+    commandLine(bun, "run", "build")
 }
 
 tasks.named("processResources") {

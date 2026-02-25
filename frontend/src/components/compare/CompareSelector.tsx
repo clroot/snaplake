@@ -16,6 +16,7 @@ interface SnapshotResponse {
   datasourceName: string
   snapshotType: string
   snapshotDate: string
+  startedAt: string
   status: string
   tables: { schema: string; table: string }[]
 }
@@ -34,6 +35,14 @@ interface CompareSelectorProps {
   onRightChange: (id: string) => void
   tableName: string | null
   onTableChange: (name: string) => void
+}
+
+function formatSnapshotLabel(snap: SnapshotResponse): string {
+  const time = new Date(snap.startedAt).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+  return `${snap.snapshotType} / ${snap.snapshotDate} ${time}`
 }
 
 export function CompareSelector({
@@ -64,7 +73,7 @@ export function CompareSelector({
     () =>
       snapshots
         ?.filter((s) => s.status === "COMPLETED")
-        .sort((a, b) => b.snapshotDate.localeCompare(a.snapshotDate)) ?? [],
+        .sort((a, b) => b.startedAt.localeCompare(a.startedAt)) ?? [],
     [snapshots],
   )
 
@@ -121,7 +130,7 @@ export function CompareSelector({
           <SelectContent>
             {completedSnapshots.map((snap) => (
               <SelectItem key={snap.id} value={snap.id}>
-                {snap.snapshotType} / {snap.snapshotDate}
+                {formatSnapshotLabel(snap)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -141,7 +150,7 @@ export function CompareSelector({
           <SelectContent>
             {completedSnapshots.map((snap) => (
               <SelectItem key={snap.id} value={snap.id}>
-                {snap.snapshotType} / {snap.snapshotDate}
+                {formatSnapshotLabel(snap)}
               </SelectItem>
             ))}
           </SelectContent>

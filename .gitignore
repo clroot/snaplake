@@ -52,3 +52,5 @@ data
 ### Frontend ###
 **/node_modules/
 src/main/resources/static/
+
+docs/plans

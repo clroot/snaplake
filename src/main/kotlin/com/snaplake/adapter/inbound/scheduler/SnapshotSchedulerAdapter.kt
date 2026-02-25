@@ -45,9 +45,10 @@ class SnapshotSchedulerAdapter(
         unregister(datasource.id)
 
         try {
+            val springCron = toSpringCron(cron)
             val future = taskScheduler.schedule(
                 { executeSnapshot(datasource.id, datasource.name) },
-                CronTrigger(cron),
+                CronTrigger(springCron),
             )
 
             if (future != null) {
@@ -86,6 +87,11 @@ class SnapshotSchedulerAdapter(
                 nextExecutionTime = null,
             )
         }
+    }
+
+    private fun toSpringCron(cron: String): String {
+        val fields = cron.trim().split("\\s+".toRegex())
+        return if (fields.size == 5) "0 $cron" else cron
     }
 
     private fun executeSnapshot(datasourceId: DatasourceId, datasourceName: String) {

@@ -81,7 +81,7 @@ class SnapshotService(
                             rs.close()
 
                             val storagePath = buildStoragePath(
-                                datasource.name, snapshotType, snapshotDate, table.schema, table.name,
+                                datasource.name, snapshotType, snapshotDate, snapshot.id, table.schema, table.name,
                             )
                             storageProvider.write(storagePath, result.data)
 
@@ -170,10 +170,11 @@ class SnapshotService(
         datasourceName: String,
         snapshotType: SnapshotType,
         snapshotDate: LocalDate,
+        snapshotId: SnapshotId,
         schema: String,
         table: String,
     ): String {
-        return "$datasourceName/${snapshotType.name.lowercase()}/$snapshotDate/$schema.$table.parquet"
+        return "$datasourceName/${snapshotType.name.lowercase()}/$snapshotDate/${snapshotId.value}/$schema.$table.parquet"
     }
 
     private fun copyToMonthly(datasource: Datasource, dailySnapshot: SnapshotMeta, date: LocalDate) {
@@ -188,7 +189,7 @@ class SnapshotService(
             for (table in dailySnapshot.tables) {
                 val data = storageProvider.read(table.storagePath)
                 val monthlyPath = buildStoragePath(
-                    datasource.name, SnapshotType.MONTHLY, date, table.schema, table.table,
+                    datasource.name, SnapshotType.MONTHLY, date, monthlySnapshot.id, table.schema, table.table,
                 )
                 storageProvider.write(monthlyPath, data)
                 monthlySnapshot.addTable(

@@ -33,7 +33,7 @@ class SnapshotSchedulerAdapterTest : DescribeSpec({
     }
 
     describe("register") {
-        it("cron이 있는 datasource를 스케줄러에 등록한다") {
+        it("6필드 Spring cron을 가진 datasource를 스케줄러에 등록한다") {
             val adapter = SnapshotSchedulerAdapter(taskScheduler, takeSnapshotUseCase, loadDatasourcePort)
             val datasource = createDatasource(cronExpression = "0 0 2 * * *")
 
@@ -41,6 +41,16 @@ class SnapshotSchedulerAdapterTest : DescribeSpec({
 
             adapter.listScheduled() shouldHaveSize 1
             adapter.listScheduled()[0].cronExpression shouldBe "0 0 2 * * *"
+        }
+
+        it("5필드 Unix cron도 정상적으로 등록한다") {
+            val adapter = SnapshotSchedulerAdapter(taskScheduler, takeSnapshotUseCase, loadDatasourcePort)
+            val datasource = createDatasource(cronExpression = "0 2 * * *")
+
+            adapter.register(datasource)
+
+            adapter.listScheduled() shouldHaveSize 1
+            adapter.listScheduled()[0].cronExpression shouldBe "0 2 * * *"
         }
 
         it("cron이 null인 datasource는 등록하지 않는다") {

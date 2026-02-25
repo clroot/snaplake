@@ -31,6 +31,7 @@ interface SnapshotResponse {
   datasourceName: string
   snapshotType: string
   snapshotDate: string
+  startedAt: string
   status: string
   tables: { schema: string; table: string; rowCount: number; sizeBytes: number }[]
 }
@@ -86,20 +87,26 @@ export function SidePanel({ onSelectTable, onSelectSnapshot, selectedSnapshotId,
       const typeNodes: TreeNode[] = []
       for (const [type, typeSnaps] of byType) {
         const sorted = typeSnaps.sort(
-          (a, b) => b.snapshotDate.localeCompare(a.snapshotDate),
+          (a, b) => b.startedAt.localeCompare(a.startedAt),
         )
 
-        const dateNodes: TreeNode[] = sorted.map((snap) => ({
-          type: "date" as const,
-          label: snap.snapshotDate,
-          snapshotId: snap.id,
-          children: snap.tables.map((t) => ({
-            type: "table" as const,
-            label: `${t.schema}.${t.table}`,
+        const dateNodes: TreeNode[] = sorted.map((snap) => {
+          const time = new Date(snap.startedAt).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+          return {
+            type: "date" as const,
+            label: `${snap.snapshotDate} ${time}`,
             snapshotId: snap.id,
-            tableName: `${t.schema}.${t.table}`,
-          })),
-        }))
+            children: snap.tables.map((t) => ({
+              type: "table" as const,
+              label: `${t.schema}.${t.table}`,
+              snapshotId: snap.id,
+              tableName: `${t.schema}.${t.table}`,
+            })),
+          }
+        })
 
         typeNodes.push({
           type: "snapshotType",
@@ -189,10 +196,14 @@ export function SidePanel({ onSelectTable, onSelectSnapshot, selectedSnapshotId,
     for (const snap of snapshots) {
       if (snap.status !== "COMPLETED") continue
       for (const t of snap.tables) {
+        const time = new Date(snap.startedAt).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
         result.push({
           snapshotId: snap.id,
           tableName: `${t.schema}.${t.table}`,
-          label: `${snap.datasourceName} / ${snap.snapshotType} / ${snap.snapshotDate} / ${t.schema}.${t.table}`,
+          label: `${snap.datasourceName} / ${snap.snapshotType} / ${snap.snapshotDate} ${time} / ${t.schema}.${t.table}`,
         })
       }
     }

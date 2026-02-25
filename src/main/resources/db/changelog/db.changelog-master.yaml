@@ -226,3 +226,30 @@ databaseChangeLog:
                   type: TEXT
                   constraints:
                     nullable: false
+
+  - changeSet:
+      id: 6-drop-snapshots-unique-constraint
+      author: snaplake
+      comment: Allow multiple snapshots per day for the same datasource and type
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: "PRAGMA foreign_keys=OFF"
+        - sql:
+            sql: >
+              CREATE TABLE snapshots_new (
+                id              TEXT PRIMARY KEY,
+                datasource_id   TEXT NOT NULL REFERENCES datasources(id),
+                datasource_name TEXT NOT NULL,
+                snapshot_type   TEXT NOT NULL,
+                snapshot_date   TEXT NOT NULL,
+                status          TEXT NOT NULL,
+                started_at      TEXT NOT NULL,
+                completed_at    TEXT,
+                error_message   TEXT
+              );
+              INSERT INTO snapshots_new SELECT id, datasource_id, datasource_name, snapshot_type, snapshot_date, status, started_at, completed_at, error_message FROM snapshots;
+              DROP TABLE snapshots;
+              ALTER TABLE snapshots_new RENAME TO snapshots;
+        - sql:
+            sql: "PRAGMA foreign_keys=ON"

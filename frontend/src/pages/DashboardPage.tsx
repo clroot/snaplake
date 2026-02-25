@@ -90,24 +90,28 @@ export function DashboardPage() {
           value={dsLoading ? null : String(activeDatasources)}
           description={`${scheduledDatasources} scheduled`}
           icon={<Database className="h-4 w-4 text-muted-foreground" />}
+          onClick={() => navigate({ to: "/datasources" })}
         />
         <SummaryCard
           title="Total Snapshots"
           value={snapLoading ? null : String(snapshots?.length ?? 0)}
           description={`${completedSnapshots} completed`}
           icon={<Layers className="h-4 w-4 text-muted-foreground" />}
+          onClick={() => navigate({ to: "/snapshots" })}
         />
         <SummaryCard
           title="Scheduled"
           value={dsLoading ? null : String(scheduledDatasources)}
           description="Active schedules"
           icon={<Clock className="h-4 w-4 text-muted-foreground" />}
+          onClick={() => navigate({ to: "/datasources" })}
         />
         <SummaryCard
           title="Failed"
           value={snapLoading ? null : String(failedSnapshots)}
           description="Snapshots with errors"
           icon={<AlertCircle className="h-4 w-4 text-muted-foreground" />}
+          onClick={() => navigate({ to: "/snapshots" })}
         />
       </div>
 
@@ -133,7 +137,13 @@ export function DashboardPage() {
               {recentSnapshots.map((snapshot) => (
                 <div
                   key={snapshot.id}
-                  className="flex items-center justify-between rounded-lg border p-3"
+                  className="flex cursor-pointer items-center justify-between rounded-lg border p-3 hover:bg-accent"
+                  onClick={() =>
+                    navigate({
+                      to: "/snapshots/$snapshotId",
+                      params: { snapshotId: snapshot.id },
+                    })
+                  }
                 >
                   <div className="flex items-center gap-3">
                     <StatusIcon status={snapshot.status} />
@@ -219,14 +229,19 @@ function SummaryCard({
   value,
   description,
   icon,
+  onClick,
 }: {
   title: string
   value: string | null
   description: string
   icon: React.ReactNode
+  onClick?: () => void
 }) {
   return (
-    <Card>
+    <Card
+      className={onClick ? "cursor-pointer hover:bg-accent/50 transition-colors" : undefined}
+      onClick={onClick}
+    >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         {icon}
