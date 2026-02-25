@@ -1,0 +1,228 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1-create-users-table
+      author: snaplake
+      changes:
+        - createTable:
+            tableName: users
+            columns:
+              - column:
+                  name: id
+                  type: TEXT
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: username
+                  type: TEXT
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: password_hash
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: role
+                  type: TEXT
+                  constraints:
+                    nullable: false
+                  defaultValue: ADMIN
+              - column:
+                  name: created_at
+                  type: TEXT
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 2-create-storage-config-table
+      author: snaplake
+      changes:
+        - createTable:
+            tableName: storage_config
+            columns:
+              - column:
+                  name: id
+                  type: INTEGER
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: type
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: local_path
+                  type: TEXT
+              - column:
+                  name: s3_bucket
+                  type: TEXT
+              - column:
+                  name: s3_region
+                  type: TEXT
+              - column:
+                  name: s3_endpoint
+                  type: TEXT
+              - column:
+                  name: s3_access_key
+                  type: TEXT
+              - column:
+                  name: s3_secret_key
+                  type: TEXT
+              - column:
+                  name: updated_at
+                  type: TEXT
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 3-create-datasources-table
+      author: snaplake
+      changes:
+        - createTable:
+            tableName: datasources
+            columns:
+              - column:
+                  name: id
+                  type: TEXT
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: name
+                  type: TEXT
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: type
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: host
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: port
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: database_name
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: username
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: encrypted_password
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: schemas
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: cron_expression
+                  type: TEXT
+              - column:
+                  name: retention_daily
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+                  defaultValueNumeric: 0
+              - column:
+                  name: retention_monthly
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+                  defaultValueNumeric: 0
+              - column:
+                  name: enabled
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+                  defaultValueNumeric: 1
+              - column:
+                  name: created_at
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TEXT
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 4-create-snapshots-table
+      author: snaplake
+      changes:
+        - sql:
+            sql: >
+              CREATE TABLE snapshots (
+                id              TEXT PRIMARY KEY,
+                datasource_id   TEXT NOT NULL REFERENCES datasources(id),
+                datasource_name TEXT NOT NULL,
+                snapshot_type   TEXT NOT NULL,
+                snapshot_date   TEXT NOT NULL,
+                status          TEXT NOT NULL,
+                started_at      TEXT NOT NULL,
+                completed_at    TEXT,
+                error_message   TEXT,
+                UNIQUE(datasource_id, snapshot_type, snapshot_date)
+              );
+      rollback:
+        - dropTable:
+            tableName: snapshots
+
+  - changeSet:
+      id: 5-create-snapshot-tables-table
+      author: snaplake
+      changes:
+        - createTable:
+            tableName: snapshot_tables
+            columns:
+              - column:
+                  name: id
+                  type: TEXT
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: snapshot_id
+                  type: TEXT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_snapshot_tables_snapshot
+                    references: snapshots(id)
+              - column:
+                  name: schema_name
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: table_name
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: row_count
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: size_bytes
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: storage_path
+                  type: TEXT
+                  constraints:
+                    nullable: false

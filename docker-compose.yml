@@ -1,0 +1,13 @@
+services:
+  snaplake:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - snaplake-data:/app/data
+    environment:
+      SNAPLAKE_DATA_DIR: /app/data
+    restart: unless-stopped
+
+volumes:
+  snaplake-data:

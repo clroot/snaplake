@@ -1,0 +1,98 @@
+plugins {
+    kotlin("jvm") version "2.1.10"
+    kotlin("plugin.spring") version "2.1.10"
+    kotlin("plugin.jpa") version "2.1.10"
+    id("org.springframework.boot") version "3.4.3"
+    id("io.spring.dependency-management") version "1.1.7"
+    id("org.graalvm.buildtools.native") version "0.10.5"
+}
+
+group = "com.snaplake"
+version = "0.1.0-SNAPSHOT"
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Spring Boot
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
+
+    // Kotlin
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
+
+    // SQLite
+    implementation("org.xerial:sqlite-jdbc:3.47.2.0")
+    implementation("org.hibernate.orm:hibernate-community-dialects")
+
+    // Liquibase
+    implementation("org.liquibase:liquibase-core")
+
+    // DuckDB
+    implementation("org.duckdb:duckdb_jdbc:1.2.1")
+
+    // JWT
+    implementation("io.jsonwebtoken:jjwt-api:0.12.6")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
+
+    // Parquet (Apache Arrow)
+    implementation("org.apache.parquet:parquet-hadoop:1.15.1")
+    implementation("org.apache.hadoop:hadoop-common:3.4.1") {
+        exclude(group = "org.slf4j")
+        exclude(group = "com.sun.xml.bind")
+        exclude(group = "javax.xml.bind")
+        exclude(group = "jakarta.xml.bind")
+    }
+
+    // S3
+    implementation("software.amazon.awssdk:s3:2.30.18")
+
+    // PostgreSQL + MySQL JDBC
+    runtimeOnly("org.postgresql:postgresql")
+    runtimeOnly("com.mysql:mysql-connector-j")
+
+    // Encryption
+    implementation("org.bouncycastle:bcprov-jdk18on:1.80")
+
+    // Test
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.security:spring-security-test")
+    testImplementation("io.kotest:kotest-runner-junit5:6.1.3")
+    testImplementation("io.kotest:kotest-assertions-core:6.1.3")
+    testImplementation("io.kotest:kotest-extensions-spring:6.1.3")
+    testImplementation("io.mockk:mockk:1.13.16")
+}
+
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.addAll("-Xjsr305=strict")
+    }
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
+}
+
+tasks.withType<Jar> {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.register<Exec>("buildFrontend") {
+    workingDir = file("frontend")
+    commandLine("bun", "run", "build")
+}
+
+tasks.named("processResources") {
+    dependsOn("buildFrontend")
+}

@@ -1,0 +1,198 @@
+import { useState, useCallback } from "react"
+import { useMutation } from "@tanstack/react-query"
+import { api } from "@/lib/api"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+import { QueryEditor } from "@/components/query/QueryEditor"
+import { QueryResult } from "@/components/query/QueryResult"
+import {
+  addQueryHistory,
+  getQueryHistory,
+  clearQueryHistory,
+  type QueryHistoryEntry,
+} from "@/lib/query-history"
+import {
+  Clock,
+  Loader2,
+  Play,
+  Trash2,
+} from "lucide-react"
+
+interface Column {
+  name: string
+  type: string
+}
+
+interface QueryResultData {
+  columns: Column[]
+  rows: unknown[][]
+  totalRows: number
+}
+
+const PAGE_SIZE = 100
+
+export function QueryPage() {
+  const [sqlText, setSqlText] = useState("")
+  const [page, setPage] = useState(0)
+  const [result, setResult] = useState<QueryResultData | null>(null)
+  const [executionTime, setExecutionTime] = useState<number | undefined>()
+  const [error, setError] = useState<string | null>(null)
+  const [showHistory, setShowHistory] = useState(false)
+  const [history, setHistory] = useState<QueryHistoryEntry[]>(getQueryHistory)
+
+  const executeMutation = useMutation({
+    mutationFn: async (params: { sql: string; offset: number }) => {
+      const start = performance.now()
+      const data = await api.post<QueryResultData>("/api/query", {
+        sql: params.sql,
+        limit: PAGE_SIZE,
+        offset: params.offset,
+      })
+      const duration = performance.now() - start
+      return { data, duration }
+    },
+    onSuccess: ({ data, duration }) => {
+      setResult(data)
+      setExecutionTime(duration)
+      setError(null)
+
+      const entry: QueryHistoryEntry = {
+        sql: sqlText,
+        executedAt: new Date().toISOString(),
+        rowCount: data.totalRows,
+        durationMs: Math.round(duration),
+      }
+      addQueryHistory(entry)
+      setHistory(getQueryHistory())
+    },
+    onError: (err: Error) => {
+      setError(err.message)
+      setResult(null)
+    },
+  })
+
+  const handleExecute = useCallback(() => {
+    if (!sqlText.trim()) return
+    setPage(0)
+    executeMutation.mutate({ sql: sqlText, offset: 0 })
+  }, [sqlText, executeMutation])
+
+  function handlePageChange(newPage: number) {
+    setPage(newPage)
+    executeMutation.mutate({ sql: sqlText, offset: newPage * PAGE_SIZE })
+  }
+
+  function handleHistorySelect(entry: QueryHistoryEntry) {
+    setSqlText(entry.sql)
+    setShowHistory(false)
+  }
+
+  function handleClearHistory() {
+    clearQueryHistory()
+    setHistory([])
+  }
+
+  return (
+    <div className="flex h-[calc(100vh-3.5rem)] -m-6 flex-col">
+      {/* Editor area */}
+      <div className="flex shrink-0 flex-col border-b" style={{ height: "40%" }}>
+        <div className="flex items-center justify-between border-b px-4 py-2">
+          <h1 className="text-lg font-semibold">SQL Query</h1>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowHistory(!showHistory)}
+            >
+              <Clock className="mr-1 h-3 w-3" />
+              History
+            </Button>
+            <Button
+              onClick={handleExecute}
+              disabled={executeMutation.isPending || !sqlText.trim()}
+              size="sm"
+            >
+              {executeMutation.isPending ? (
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              ) : (
+                <Play className="mr-1 h-3 w-3" />
+              )}
+              Execute
+            </Button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          {showHistory ? (
+            <div className="h-full overflow-auto p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="font-medium">Query History</h3>
+                <Button variant="ghost" size="sm" onClick={handleClearHistory}>
+                  <Trash2 className="mr-1 h-3 w-3" />
+                  Clear
+                </Button>
+              </div>
+              {history.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No queries yet.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {history.map((entry, i) => (
+                    <button
+                      key={i}
+                      className="w-full rounded-lg border p-3 text-left hover:bg-accent"
+                      onClick={() => handleHistorySelect(entry)}
+                    >
+                      <code className="block truncate text-sm">
+                        {entry.sql}
+                      </code>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {new Date(entry.executedAt).toLocaleString()} &middot;{" "}
+                        {entry.rowCount} rows &middot; {entry.durationMs}ms
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <QueryEditor
+              value={sqlText}
+              onChange={setSqlText}
+              onExecute={handleExecute}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Results area */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-6">
+        {executeMutation.isPending ? (
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-64 w-full" />
+          </div>
+        ) : error ? (
+          <div className="rounded-xl border border-destructive/50 bg-destructive/10 p-4">
+            <p className="font-medium text-destructive">Query Error</p>
+            <p className="mt-1 text-sm text-destructive/80">{error}</p>
+          </div>
+        ) : result ? (
+          <QueryResult
+            columns={result.columns}
+            rows={result.rows}
+            totalRows={result.totalRows}
+            page={page}
+            pageSize={PAGE_SIZE}
+            onPageChange={handlePageChange}
+            executionTime={executionTime}
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-muted-foreground">
+            <p>Execute a query to see results</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

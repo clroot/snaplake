@@ -1,0 +1,102 @@
+package com.snaplake.adapter.outbound.query
+
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.shouldBe
+import java.nio.file.Files
+import java.sql.DriverManager
+
+class DuckDbQueryEngineTest : DescribeSpec({
+
+    val engine = DuckDbQueryEngine()
+
+    describe("executeQuery") {
+        it("SELECT 쿼리를 실행한다") {
+            val result = engine.executeQuery("SELECT 1 as val, 'hello' as msg", null)
+            result.columns shouldHaveSize 2
+            result.columns[0].name shouldBe "val"
+            result.rows shouldHaveSize 1
+        }
+
+        it("INSERT 쿼리는 거부한다") {
+            shouldThrow<IllegalArgumentException> {
+                engine.executeQuery("INSERT INTO test VALUES (1)", null)
+            }
+        }
+
+        it("DELETE 쿼리는 거부한다") {
+            shouldThrow<IllegalArgumentException> {
+                engine.executeQuery("DELETE FROM test", null)
+            }
+        }
+
+        it("DROP 쿼리는 거부한다") {
+            shouldThrow<IllegalArgumentException> {
+                engine.executeQuery("DROP TABLE test", null)
+            }
+        }
+    }
+
+    describe("describeTable") {
+        it("Parquet 파일의 스키마를 반환한다") {
+            val tempParquet = createTestParquet()
+            try {
+                val columns = engine.describeTable(tempParquet.toAbsolutePath().toString(), null)
+                columns.isNotEmpty() shouldBe true
+                columns.any { it.name == "id" } shouldBe true
+            } finally {
+                Files.deleteIfExists(tempParquet)
+            }
+        }
+    }
+
+    describe("previewTable") {
+        it("Parquet 파일의 데이터를 미리보기한다") {
+            val tempParquet = createTestParquet()
+            try {
+                val result = engine.previewTable(
+                    uri = tempParquet.toAbsolutePath().toString(),
+                    storageConfig = null,
+                    limit = 10,
+                )
+                result.rows shouldHaveSize 3
+                result.columns.any { it.name == "id" } shouldBe true
+            } finally {
+                Files.deleteIfExists(tempParquet)
+            }
+        }
+    }
+
+    describe("countRows") {
+        it("Parquet 파일의 행 수를 반환한다") {
+            val tempParquet = createTestParquet()
+            try {
+                val count = engine.countRows(tempParquet.toAbsolutePath().toString(), null)
+                count shouldBe 3
+            } finally {
+                Files.deleteIfExists(tempParquet)
+            }
+        }
+    }
+})
+
+private fun createTestParquet(): java.nio.file.Path {
+    val tempDb = Files.createTempFile("test-", ".db")
+    val tempParquet = Files.createTempFile("test-", ".parquet")
+
+    DriverManager.getConnection("jdbc:sqlite:${tempDb}").use { conn ->
+        conn.createStatement().use { stmt ->
+            stmt.execute("CREATE TABLE test_data (id INTEGER, name TEXT, score REAL)")
+            stmt.execute("INSERT INTO test_data VALUES (1, 'Alice', 95.5)")
+            stmt.execute("INSERT INTO test_data VALUES (2, 'Bob', 87.3)")
+            stmt.execute("INSERT INTO test_data VALUES (3, 'Charlie', 92.1)")
+        }
+        val rs = conn.createStatement().executeQuery("SELECT * FROM test_data ORDER BY id")
+        val parquetBytes = com.snaplake.adapter.outbound.database.ParquetWriter.writeResultSetToParquet(rs)
+        Files.write(tempParquet, parquetBytes)
+    }
+    Files.deleteIfExists(tempDb)
+
+    return tempParquet
+}

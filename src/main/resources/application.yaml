@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: snaplake
+  datasource:
+    url: jdbc:sqlite:${SNAPLAKE_DATA_DIR:./data}/snaplake.db
+    driver-class-name: org.sqlite.JDBC
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+server:
+  port: ${SNAPLAKE_PORT:8080}
+
+snaplake:
+  data-dir: ${SNAPLAKE_DATA_DIR:./data}
+  jwt:
+    secret: ${SNAPLAKE_JWT_SECRET:}
+    expiration-hours: 24
+  encryption:
+    key: ${SNAPLAKE_ENCRYPTION_KEY:}

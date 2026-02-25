@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: snaplake-test
+  datasource:
+    url: jdbc:sqlite:./build/test-data/snaplake-test.db
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      maximum-pool-size: 1
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+
+server:
+  port: 0
+
+snaplake:
+  data-dir: ./build/test-data
+  jwt:
+    secret: test-secret-key-that-is-long-enough-for-hmac-sha256-algorithm
+    expiration-hours: 24

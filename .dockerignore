@@ -1,0 +1,9 @@
+.git
+.gradle
+build
+data
+frontend/node_modules
+frontend/dist
+src/main/resources/static
+*.md
+docs
