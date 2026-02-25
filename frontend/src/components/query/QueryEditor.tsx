@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, useMemo } from "react"
 import { EditorView, keymap, placeholder } from "@codemirror/view"
-import { EditorState } from "@codemirror/state"
+import { EditorState, Prec } from "@codemirror/state"
 import { sql, SQLDialect } from "@codemirror/lang-sql"
 import {
   type Completion,
@@ -159,19 +159,23 @@ export function QueryEditor({
         basicSetup,
         sql({ dialect: duckDialect }),
         autocompletion({ override: [completionSource] }),
-        keymap.of([
-          {
-            key: "Ctrl-Enter",
-            mac: "Cmd-Enter",
-            run: handleExecute,
-          },
-        ]),
+        Prec.highest(
+          keymap.of([
+            {
+              key: "Ctrl-Enter",
+              mac: "Cmd-Enter",
+              run: handleExecute,
+            },
+          ]),
+        ),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             onChange(update.state.doc.toString())
           }
         }),
-        placeholder("Write your SQL query here... (Ctrl+Enter to execute)"),
+        placeholder(
+          `Write your SQL query here... (${/Mac|iPhone|iPad/.test(navigator.userAgent) ? "⌘" : "Ctrl"}+Enter to execute)`,
+        ),
         EditorView.theme({
           "&": {
             fontSize: "14px",

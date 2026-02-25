@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useEffect, useMemo, useRef } from "react"
 import { useMutation, useQueries, useQuery } from "@tanstack/react-query"
 import { useSearch } from "@tanstack/react-router"
 import { api } from "@/lib/api"
@@ -118,6 +118,12 @@ export function QueryPage() {
     return Object.keys(tables).length > 0 ? tables : undefined
   }, [validEntries, schemaData])
 
+  // ref로 최신 sqlText를 항상 참조 (CodeMirror 키맵에서의 stale closure 방지)
+  const sqlTextRef = useRef(sqlText)
+  useEffect(() => {
+    sqlTextRef.current = sqlText
+  }, [sqlText])
+
   const executeMutation = useMutation({
     mutationFn: async (params: { sql: string; offset: number }) => {
       const validEntries = context.entries.filter((e) => e.snapshotId)
@@ -162,10 +168,37 @@ export function QueryPage() {
   })
 
   const handleExecute = useCallback(() => {
-    if (!sqlText.trim()) return
+    const query = sqlTextRef.current
+    if (!query.trim()) return
     setPage(0)
-    executeMutation.mutate({ sql: sqlText, offset: 0 })
-  }, [sqlText, executeMutation])
+    executeMutation.mutate({ sql: query, offset: 0 })
+  }, [executeMutation])
+
+  // 페이지 레벨 키보드 단축키
+  const handleExecuteRef = useRef(handleExecute)
+  useEffect(() => {
+    handleExecuteRef.current = handleExecute
+  }, [handleExecute])
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      // Cmd+Enter / Ctrl+Enter: 쿼리 실행 (에디터 밖에서도 동작)
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        // CodeMirror 에디터 내부에서는 CM6 keymap이 처리
+        if ((e.target as Element)?.closest(".cm-editor")) return
+        e.preventDefault()
+        handleExecuteRef.current()
+      }
+
+      // Escape: 히스토리 패널 닫기
+      if (e.key === "Escape") {
+        setShowHistory(false)
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [])
 
   function handlePageChange(newPage: number) {
     setPage(newPage)
@@ -207,6 +240,7 @@ export function QueryPage() {
               onClick={handleExecute}
               disabled={executeMutation.isPending || !sqlText.trim()}
               size="sm"
+              title="Execute query (⌘Enter)"
             >
               {executeMutation.isPending ? (
                 <Loader2 className="mr-1 h-3 w-3 animate-spin" />
