@@ -1,6 +1,6 @@
 package com.snaplake.application.service
 
-import com.snaplake.adapter.outbound.database.ParquetWriter
+import com.snaplake.adapter.outbound.database.DuckDbParquetWriter
 import com.snaplake.adapter.outbound.query.DuckDbQueryEngine
 import com.snaplake.adapter.outbound.storage.LocalStorageAdapter
 import com.snaplake.application.port.inbound.CompareDiffUseCase
@@ -145,7 +145,7 @@ private fun createParquetFile(path: String, data: List<Triple<Int, String, Doubl
                 }
             }
             val rs = conn.createStatement().executeQuery("SELECT * FROM users ORDER BY id")
-            val parquetBytes = ParquetWriter.writeResultSetToParquet(rs)
+            val parquetBytes = DuckDbParquetWriter().writeResultSetToParquet(rs).data
             Files.write(java.nio.file.Path.of(path), parquetBytes)
         }
     } finally {

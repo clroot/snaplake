@@ -46,15 +46,6 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
 
-    // Parquet (Apache Arrow)
-    implementation("org.apache.parquet:parquet-hadoop:1.15.1")
-    implementation("org.apache.hadoop:hadoop-common:3.4.1") {
-        exclude(group = "org.slf4j")
-        exclude(group = "com.sun.xml.bind")
-        exclude(group = "javax.xml.bind")
-        exclude(group = "jakarta.xml.bind")
-    }
-
     // S3
     implementation("software.amazon.awssdk:s3:2.30.18")
 
