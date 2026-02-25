@@ -11,6 +11,7 @@ interface DatabaseDialect {
     val type: DatabaseType
     fun createConnection(datasource: Datasource, decryptedPassword: String): Connection
     fun listTables(connection: Connection, schema: String): List<TableInfo>
+    fun listPrimaryKeys(connection: Connection, schema: String, table: String): List<String>
     fun testConnection(datasource: Datasource, decryptedPassword: String): ConnectionTestResult
 }
 

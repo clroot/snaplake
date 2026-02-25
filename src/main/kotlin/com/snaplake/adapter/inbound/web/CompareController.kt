@@ -4,6 +4,7 @@ import com.snaplake.adapter.inbound.web.dto.*
 import com.snaplake.application.port.inbound.CompareDiffUseCase
 import com.snaplake.application.port.inbound.CompareRowsUseCase
 import com.snaplake.application.port.inbound.CompareStatsUseCase
+import com.snaplake.application.port.inbound.CompareUnifiedDiffUseCase
 import com.snaplake.domain.vo.SnapshotId
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
@@ -17,6 +18,7 @@ class CompareController(
     private val compareStatsUseCase: CompareStatsUseCase,
     private val compareRowsUseCase: CompareRowsUseCase,
     private val compareDiffUseCase: CompareDiffUseCase,
+    private val compareUnifiedDiffUseCase: CompareUnifiedDiffUseCase,
 ) {
     @PostMapping("/stats")
     fun compareStats(@RequestBody request: CompareStatsRequest): ResponseEntity<StatsResultResponse> {
@@ -42,6 +44,20 @@ class CompareController(
             )
         )
         return ResponseEntity.ok(RowsCompareResultResponse.from(result))
+    }
+
+    @PostMapping("/unified-diff")
+    fun unifiedDiff(@RequestBody request: UnifiedDiffRequest): ResponseEntity<UnifiedDiffResponse> {
+        val result = compareUnifiedDiffUseCase.compareUnifiedDiff(
+            CompareUnifiedDiffUseCase.Command(
+                leftSnapshotId = SnapshotId(request.leftSnapshotId),
+                rightSnapshotId = SnapshotId(request.rightSnapshotId),
+                tableName = request.tableName,
+                limit = request.limit,
+                offset = request.offset,
+            )
+        )
+        return ResponseEntity.ok(UnifiedDiffResponse.from(result))
     }
 
     @PostMapping("/diff")

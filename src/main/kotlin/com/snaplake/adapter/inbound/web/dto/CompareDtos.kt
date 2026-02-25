@@ -1,8 +1,6 @@
 package com.snaplake.adapter.inbound.web.dto
 
-import com.snaplake.application.port.inbound.ColumnStat
-import com.snaplake.application.port.inbound.RowsCompareResult
-import com.snaplake.application.port.inbound.StatsResult
+import com.snaplake.application.port.inbound.*
 
 data class CompareStatsRequest(
     val leftSnapshotId: String,
@@ -70,3 +68,52 @@ data class RowsCompareResultResponse(
         )
     }
 }
+
+data class UnifiedDiffRequest(
+    val leftSnapshotId: String,
+    val rightSnapshotId: String,
+    val tableName: String,
+    val limit: Int = 100,
+    val offset: Int = 0,
+)
+
+data class DiffSummaryResponse(val added: Long, val removed: Long, val changed: Long)
+
+data class DiffRowResponse(
+    val diffType: String,
+    val values: List<Any?>? = null,
+    val left: List<Any?>? = null,
+    val right: List<Any?>? = null,
+    val changedColumns: List<Int>? = null,
+)
+
+data class UnifiedDiffResponse(
+    val columns: List<ColumnResponse>,
+    val primaryKeys: List<String>,
+    val rows: List<DiffRowResponse>,
+    val totalRows: Long,
+    val summary: DiffSummaryResponse,
+) {
+    companion object {
+        fun from(result: UnifiedDiffResult): UnifiedDiffResponse = UnifiedDiffResponse(
+            columns = result.columns.map { ColumnResponse(it.name, it.type) },
+            primaryKeys = result.primaryKeys,
+            rows = result.rows.map { row ->
+                when (row) {
+                    is DiffRow.Added -> DiffRowResponse(diffType = "ADDED", values = row.values)
+                    is DiffRow.Removed -> DiffRowResponse(diffType = "REMOVED", values = row.values)
+                    is DiffRow.Changed -> DiffRowResponse(
+                        diffType = "CHANGED",
+                        left = row.left,
+                        right = row.right,
+                        changedColumns = row.changedColumns,
+                    )
+                }
+            },
+            totalRows = result.totalRows,
+            summary = DiffSummaryResponse(result.summary.added, result.summary.removed, result.summary.changed),
+        )
+    }
+}
+
+data class ColumnResponse(val name: String, val type: String)

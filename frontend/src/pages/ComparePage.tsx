@@ -2,8 +2,7 @@ import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CompareSelector } from "@/components/compare/CompareSelector"
 import { CompareStats } from "@/components/compare/CompareStats"
-import { CompareRows } from "@/components/compare/CompareRows"
-import { CompareDiff } from "@/components/compare/CompareDiff"
+import { CompareDiffView } from "@/components/compare/CompareDiffView"
 import { Split } from "lucide-react"
 
 export function ComparePage() {
@@ -51,7 +50,6 @@ export function ComparePage() {
         <Tabs defaultValue="stats" className="space-y-4">
           <TabsList>
             <TabsTrigger value="stats">Stats</TabsTrigger>
-            <TabsTrigger value="rows">Rows</TabsTrigger>
             <TabsTrigger value="diff">Diff</TabsTrigger>
           </TabsList>
 
@@ -63,16 +61,8 @@ export function ComparePage() {
             />
           </TabsContent>
 
-          <TabsContent value="rows">
-            <CompareRows
-              leftSnapshotId={leftSnapshotId}
-              rightSnapshotId={rightSnapshotId}
-              tableName={tableName}
-            />
-          </TabsContent>
-
           <TabsContent value="diff">
-            <CompareDiff
+            <CompareDiffView
               leftSnapshotId={leftSnapshotId}
               rightSnapshotId={rightSnapshotId}
               tableName={tableName}

@@ -85,6 +85,13 @@ class SnapshotService(
                             )
                             storageProvider.write(storagePath, result.data)
 
+                            val primaryKeys = try {
+                                dialect.listPrimaryKeys(conn, table.schema, table.name)
+                            } catch (e: Exception) {
+                                log.warn("Failed to get PKs for {}.{}: {}", table.schema, table.name, e.message)
+                                emptyList()
+                            }
+
                             snapshot.addTable(
                                 TableMeta(
                                     schema = table.schema,
@@ -92,6 +99,7 @@ class SnapshotService(
                                     rowCount = result.rowCount,
                                     sizeBytes = result.data.size.toLong(),
                                     storagePath = storagePath,
+                                    primaryKeys = primaryKeys,
                                 )
                             )
 
@@ -199,6 +207,7 @@ class SnapshotService(
                         rowCount = table.rowCount,
                         sizeBytes = table.sizeBytes,
                         storagePath = monthlyPath,
+                        primaryKeys = table.primaryKeys,
                     )
                 )
             }

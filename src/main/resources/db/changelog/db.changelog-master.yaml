@@ -253,3 +253,15 @@ databaseChangeLog:
               ALTER TABLE snapshots_new RENAME TO snapshots;
         - sql:
             sql: "PRAGMA foreign_keys=ON"
+
+  - changeSet:
+      id: 7-add-primary-keys-to-snapshot-tables
+      author: snaplake
+      changes:
+        - addColumn:
+            tableName: snapshot_tables
+            columns:
+              - column:
+                  name: primary_keys
+                  type: TEXT
+                  defaultValue: "[]"

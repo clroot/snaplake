@@ -45,6 +45,32 @@ class PostgresDialect : DatabaseDialect {
         }
     }
 
+    override fun listPrimaryKeys(connection: Connection, schema: String, table: String): List<String> {
+        val sql = """
+            SELECT kcu.column_name
+            FROM information_schema.table_constraints tc
+            JOIN information_schema.key_column_usage kcu
+              ON tc.constraint_name = kcu.constraint_name
+              AND tc.table_schema = kcu.table_schema
+            WHERE tc.constraint_type = 'PRIMARY KEY'
+              AND tc.table_schema = ?
+              AND tc.table_name = ?
+            ORDER BY kcu.ordinal_position
+        """.trimIndent()
+
+        return connection.prepareStatement(sql).use { stmt ->
+            stmt.setString(1, schema)
+            stmt.setString(2, table)
+            stmt.executeQuery().use { rs ->
+                val columns = mutableListOf<String>()
+                while (rs.next()) {
+                    columns.add(rs.getString("column_name"))
+                }
+                columns
+            }
+        }
+    }
+
     override fun testConnection(datasource: Datasource, decryptedPassword: String): ConnectionTestResult {
         return try {
             createConnection(datasource, decryptedPassword).use { conn ->

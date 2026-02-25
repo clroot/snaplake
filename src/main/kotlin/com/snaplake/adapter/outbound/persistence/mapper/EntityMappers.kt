@@ -119,6 +119,7 @@ class SnapshotMapper {
                     rowCount = table.rowCount,
                     sizeBytes = table.sizeBytes,
                     storagePath = table.storagePath,
+                    primaryKeys = objectMapper.writeValueAsString(table.primaryKeys),
                 )
             )
         }
@@ -142,6 +143,7 @@ class SnapshotMapper {
                 rowCount = tableEntity.rowCount,
                 sizeBytes = tableEntity.sizeBytes,
                 storagePath = tableEntity.storagePath,
+                primaryKeys = objectMapper.readValue(tableEntity.primaryKeys, object : TypeReference<List<String>>() {}),
             )
         },
     )

@@ -27,4 +27,7 @@ class SnapshotTableEntity(
 
     @Column(name = "storage_path", nullable = false)
     val storagePath: String,
+
+    @Column(name = "primary_keys", nullable = false)
+    val primaryKeys: String = "[]",
 )

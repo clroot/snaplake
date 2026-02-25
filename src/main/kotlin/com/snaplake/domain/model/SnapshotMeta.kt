@@ -14,6 +14,7 @@ data class TableMeta(
     val rowCount: Long,
     val sizeBytes: Long,
     val storagePath: String,
+    val primaryKeys: List<String> = emptyList(),
 )
 
 class SnapshotMeta private constructor(

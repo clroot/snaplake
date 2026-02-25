@@ -45,6 +45,29 @@ class MySqlDialect : DatabaseDialect {
         }
     }
 
+    override fun listPrimaryKeys(connection: Connection, schema: String, table: String): List<String> {
+        val sql = """
+            SELECT COLUMN_NAME
+            FROM information_schema.KEY_COLUMN_USAGE
+            WHERE TABLE_SCHEMA = ?
+              AND TABLE_NAME = ?
+              AND CONSTRAINT_NAME = 'PRIMARY'
+            ORDER BY ORDINAL_POSITION
+        """.trimIndent()
+
+        return connection.prepareStatement(sql).use { stmt ->
+            stmt.setString(1, schema)
+            stmt.setString(2, table)
+            stmt.executeQuery().use { rs ->
+                val columns = mutableListOf<String>()
+                while (rs.next()) {
+                    columns.add(rs.getString("COLUMN_NAME"))
+                }
+                columns
+            }
+        }
+    }
+
     override fun testConnection(datasource: Datasource, decryptedPassword: String): ConnectionTestResult {
         return try {
             createConnection(datasource, decryptedPassword).use { conn ->
