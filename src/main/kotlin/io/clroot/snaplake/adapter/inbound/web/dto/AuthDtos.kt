@@ -1,10 +1,12 @@
 package io.clroot.snaplake.adapter.inbound.web.dto
 
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Size
 import java.time.Instant
 
 data class LoginRequest(
-    val username: String,
-    val password: String,
+    @field:NotBlank val username: String,
+    @field:NotBlank val password: String,
 )
 
 data class LoginResponse(
@@ -13,6 +15,6 @@ data class LoginResponse(
 )
 
 data class ChangePasswordRequest(
-    val currentPassword: String,
-    val newPassword: String,
+    @field:NotBlank val currentPassword: String,
+    @field:NotBlank @field:Size(min = 4) val newPassword: String,
 )

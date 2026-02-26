@@ -1,9 +1,12 @@
 package io.clroot.snaplake.adapter.inbound.web.dto
 
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Size
+
 data class InitializeRequest(
-    val adminUsername: String,
-    val adminPassword: String,
-    val storageType: String,
+    @field:NotBlank val adminUsername: String,
+    @field:NotBlank @field:Size(min = 4) val adminPassword: String,
+    @field:NotBlank val storageType: String,
     val localPath: String?,
     val s3Bucket: String?,
     val s3Region: String?,
@@ -17,7 +20,7 @@ data class SetupStatusResponse(
 )
 
 data class TestStorageRequest(
-    val storageType: String,
+    @field:NotBlank val storageType: String,
     val localPath: String?,
     val s3Bucket: String?,
     val s3Region: String?,

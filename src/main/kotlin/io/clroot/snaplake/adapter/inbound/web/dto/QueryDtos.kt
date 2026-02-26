@@ -2,11 +2,14 @@ package io.clroot.snaplake.adapter.inbound.web.dto
 
 import io.clroot.snaplake.application.port.outbound.ColumnSchema
 import io.clroot.snaplake.application.port.outbound.QueryResult
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.Min
+import jakarta.validation.constraints.NotBlank
 
 data class ExecuteQueryRequest(
-    val sql: String,
-    val limit: Int = 100,
-    val offset: Int = 0,
+    @field:NotBlank val sql: String,
+    @field:Min(1) @field:Max(1000) val limit: Int = 100,
+    @field:Min(0) val offset: Int = 0,
     val context: SnapshotContextRequest? = null,
 )
 
