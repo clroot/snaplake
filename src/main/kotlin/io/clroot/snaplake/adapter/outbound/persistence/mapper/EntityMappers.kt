@@ -3,6 +3,7 @@ package io.clroot.snaplake.adapter.outbound.persistence.mapper
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.clroot.snaplake.adapter.outbound.persistence.entity.*
+import io.clroot.snaplake.application.port.outbound.EncryptionPort
 import io.clroot.snaplake.domain.model.*
 import io.clroot.snaplake.domain.vo.DatasourceId
 import io.clroot.snaplake.domain.vo.SnapshotId
@@ -83,7 +84,13 @@ class DatasourceMapper {
 }
 
 @Component
-class StorageConfigMapper {
+class StorageConfigMapper(
+    private val encryptionPort: EncryptionPort,
+) {
+    companion object {
+        private const val ENCRYPTED_PREFIX = "ENC:"
+    }
+
     fun toEntity(config: StorageConfig): StorageConfigEntity =
         StorageConfigEntity(
             id = 1,
@@ -92,8 +99,8 @@ class StorageConfigMapper {
             s3Bucket = config.s3Bucket,
             s3Region = config.s3Region,
             s3Endpoint = config.s3Endpoint,
-            s3AccessKey = config.s3AccessKey,
-            s3SecretKey = config.s3SecretKey,
+            s3AccessKey = config.s3AccessKey?.let { ENCRYPTED_PREFIX + encryptionPort.encrypt(it) },
+            s3SecretKey = config.s3SecretKey?.let { ENCRYPTED_PREFIX + encryptionPort.encrypt(it) },
             updatedAt = Instant.now().toString(),
         )
 
@@ -104,9 +111,16 @@ class StorageConfigMapper {
             s3Bucket = entity.s3Bucket,
             s3Region = entity.s3Region,
             s3Endpoint = entity.s3Endpoint,
-            s3AccessKey = entity.s3AccessKey,
-            s3SecretKey = entity.s3SecretKey,
+            s3AccessKey = entity.s3AccessKey?.let { decryptIfNeeded(it) },
+            s3SecretKey = entity.s3SecretKey?.let { decryptIfNeeded(it) },
         )
+
+    private fun decryptIfNeeded(value: String): String =
+        if (value.startsWith(ENCRYPTED_PREFIX)) {
+            encryptionPort.decrypt(value.removePrefix(ENCRYPTED_PREFIX))
+        } else {
+            value
+        }
 }
 
 @Component
