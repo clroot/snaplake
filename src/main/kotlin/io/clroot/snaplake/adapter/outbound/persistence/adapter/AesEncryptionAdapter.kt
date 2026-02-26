@@ -2,6 +2,7 @@ package io.clroot.snaplake.adapter.outbound.persistence.adapter
 
 import io.clroot.snaplake.application.port.outbound.EncryptionPort
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.security.SecureRandom
@@ -11,8 +12,9 @@ import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
 @Component
-class AesEncryptionAdapter(
+class AesEncryptionAdapter @Autowired constructor(
     @Value("\${snaplake.encryption.key:}") private val configuredKey: String,
+    @Value("\${spring.profiles.active:}") private val activeProfilesRaw: String = "",
 ) : EncryptionPort {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -23,11 +25,26 @@ class AesEncryptionAdapter(
         private const val KEY_LENGTH = 32
     }
 
-    private val secretKey: SecretKeySpec by lazy {
+    constructor(configuredKey: String, activeProfiles: Array<String>) : this(
+        configuredKey = configuredKey,
+        activeProfilesRaw = activeProfiles.joinToString(","),
+    )
+
+    private val secretKey: SecretKeySpec
+
+    init {
         val keyBytes =
             if (configuredKey.isBlank()) {
-                log.warn("SNAPLAKE_ENCRYPTION_KEY is not set. Using default key. THIS IS NOT SAFE FOR PRODUCTION.")
-                "snaplake-default-encryption-key!".toByteArray()
+                val activeProfiles = activeProfilesRaw.split(",").map { it.trim().lowercase() }
+                if (activeProfiles.contains("dev")) {
+                    log.warn("SNAPLAKE_ENCRYPTION_KEY is not set. Using default key. THIS IS NOT SAFE FOR PRODUCTION.")
+                    "snaplake-default-encryption-key!".toByteArray()
+                } else {
+                    throw IllegalStateException(
+                        "SNAPLAKE_ENCRYPTION_KEY must be set in production. " +
+                            "Set it via environment variable or application.yml property 'snaplake.encryption.key'.",
+                    )
+                }
             } else {
                 val decoded = configuredKey.toByteArray()
                 if (decoded.size < KEY_LENGTH) {
@@ -36,7 +53,7 @@ class AesEncryptionAdapter(
                     decoded.copyOfRange(0, KEY_LENGTH)
                 }
             }
-        SecretKeySpec(keyBytes, "AES")
+        secretKey = SecretKeySpec(keyBytes, "AES")
     }
 
     override fun encrypt(plainText: String): String {

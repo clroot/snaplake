@@ -74,6 +74,7 @@ kotlin {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    systemProperty("snaplake.encryption.key", "test-encryption-key-for-unit-tests")
 }
 
 tasks.withType<Jar> {
