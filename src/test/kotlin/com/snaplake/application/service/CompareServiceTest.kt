@@ -136,6 +136,7 @@ class CompareServiceTest : DescribeSpec({
                 )
 
                 result.primaryKeys shouldBe listOf("id")
+                result.totalRows shouldBe 3
                 result.summary.added shouldBe 1
                 result.summary.removed shouldBe 1
                 result.summary.changed shouldBe 1
@@ -146,6 +147,33 @@ class CompareServiceTest : DescribeSpec({
                 val changed = result.rows.filterIsInstance<DiffRow.Changed>()
                 changed.size shouldBe 1
                 changed.first().changedColumns.isNotEmpty() shouldBe true
+            }
+
+            it("CHANGED 행에서 변경된 컬럼 인덱스가 정확하다") {
+                val result = sut.compareUnifiedDiff(
+                    CompareUnifiedDiffUseCase.Command(leftSnapshotId, rightSnapshotId, "users"),
+                )
+
+                val changed = result.rows.filterIsInstance<DiffRow.Changed>().first()
+                val columnNames = result.columns.map { it.name }
+                val scoreIndex = columnNames.indexOf("score")
+
+                changed.changedColumns.contains(scoreIndex) shouldBe true
+
+                val idIndex = columnNames.indexOf("id")
+                changed.changedColumns.contains(idIndex) shouldBe false
+            }
+
+            it("페이지네이션이 적용되어도 totalRows는 전체 변경 수를 반환한다") {
+                val result = sut.compareUnifiedDiff(
+                    CompareUnifiedDiffUseCase.Command(
+                        leftSnapshotId, rightSnapshotId, "users",
+                        limit = 1, offset = 0,
+                    ),
+                )
+
+                result.totalRows shouldBe 3
+                result.rows.size shouldBe 1
             }
         }
 

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import { Button } from "@/components/ui/button"
@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { CellDisplay } from "@/components/common/CellDisplay"
-import { Columns2, Rows3, Info } from "lucide-react"
+import { AlertCircle, Columns2, Rows3, Info } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface DiffColumn {
@@ -60,7 +60,11 @@ export function CompareDiffView({
   const [viewMode, setViewMode] = useState<"unified" | "split">("unified")
   const [page, setPage] = useState(0)
 
-  const { data, isLoading } = useQuery({
+  useEffect(() => {
+    setPage(0)
+  }, [leftSnapshotId, rightSnapshotId, tableName])
+
+  const { data, isLoading, isError } = useQuery({
     queryKey: [
       "compare-unified-diff",
       leftSnapshotId,
@@ -83,6 +87,15 @@ export function CompareDiffView({
       <div className="space-y-2">
         <Skeleton className="h-8 w-full" />
         <Skeleton className="h-48 w-full" />
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center gap-2 py-12 text-destructive">
+        <AlertCircle className="h-8 w-8" />
+        <p className="text-sm">Failed to load diff data</p>
       </div>
     )
   }
@@ -318,7 +331,7 @@ function SplitView({
   )
 
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       {/* Left (old) */}
       <div className="overflow-auto rounded-xl border">
         <Table>

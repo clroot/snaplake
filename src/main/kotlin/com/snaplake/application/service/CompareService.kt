@@ -141,62 +141,77 @@ class CompareService(
         limit: Int,
         offset: Int,
     ): UnifiedDiffResult {
-        val pkJoin = primaryKeys.joinToString(" AND ") { "l.\"$it\" = r.\"$it\"" }
-        val firstPk = primaryKeys.first()
+        val pkJoin = primaryKeys.joinToString(" AND ") { pk ->
+            "l.\"${escapeIdentifier(pk)}\" = r.\"${escapeIdentifier(pk)}\""
+        }
+        val firstPk = escapeIdentifier(primaryKeys.first())
         val nonPkCols = columns.map { it.name }.filter { it !in primaryKeys }
 
         val changeCondition = if (nonPkCols.isNotEmpty()) {
-            nonPkCols.joinToString(" OR ") { "l.\"$it\" IS DISTINCT FROM r.\"$it\"" }
+            nonPkCols.joinToString(" OR ") { col ->
+                "l.\"${escapeIdentifier(col)}\" IS DISTINCT FROM r.\"${escapeIdentifier(col)}\""
+            }
         } else {
             "FALSE"
         }
 
-        val leftCols = columns.joinToString(", ") { "l.\"${it.name}\" as \"l_${it.name}\"" }
-        val rightCols = columns.joinToString(", ") { "r.\"${it.name}\" as \"r_${it.name}\"" }
-        val orderBy = primaryKeys.joinToString(", ") { "COALESCE(l.\"$it\", r.\"$it\")" }
+        val leftCols = columns.joinToString(", ") {
+            "l.\"${escapeIdentifier(it.name)}\" as \"l_${escapeIdentifier(it.name)}\""
+        }
+        val rightCols = columns.joinToString(", ") {
+            "r.\"${escapeIdentifier(it.name)}\" as \"r_${escapeIdentifier(it.name)}\""
+        }
+        val orderBy = primaryKeys.joinToString(", ") {
+            "COALESCE(\"l_${escapeIdentifier(it)}\", \"r_${escapeIdentifier(it)}\")"
+        }
 
+        val whereClause = """
+            l."$firstPk" IS NULL
+            OR r."$firstPk" IS NULL
+            OR ($changeCondition)
+        """.trimIndent()
+
+        // Single CTE for both summary and paginated data
         val sql = """
+            WITH diff AS (
+                SELECT
+                    CASE
+                        WHEN l."$firstPk" IS NULL THEN 'ADDED'
+                        WHEN r."$firstPk" IS NULL THEN 'REMOVED'
+                        ELSE 'CHANGED'
+                    END as _diff_type,
+                    $leftCols, $rightCols
+                FROM '$leftUri' l
+                FULL OUTER JOIN '$rightUri' r ON $pkJoin
+                WHERE $whereClause
+            )
             SELECT
-                CASE
-                    WHEN l."$firstPk" IS NULL THEN 'ADDED'
-                    WHEN r."$firstPk" IS NULL THEN 'REMOVED'
-                    ELSE 'CHANGED'
-                END as _diff_type,
-                $leftCols, $rightCols
-            FROM '$leftUri' l
-            FULL OUTER JOIN '$rightUri' r ON $pkJoin
-            WHERE l."$firstPk" IS NULL
-               OR r."$firstPk" IS NULL
-               OR ($changeCondition)
+                (SELECT COUNT(*) FROM diff) as _total,
+                (SELECT COUNT(*) FILTER (WHERE _diff_type = 'ADDED') FROM diff) as _added,
+                (SELECT COUNT(*) FILTER (WHERE _diff_type = 'REMOVED') FROM diff) as _removed,
+                (SELECT COUNT(*) FILTER (WHERE _diff_type = 'CHANGED') FROM diff) as _changed,
+                d.*
+            FROM diff d
             ORDER BY $orderBy
         """.trimIndent()
 
         val result = queryEngine.executeQuery(sql, storageConfig, limit, offset)
         val colCount = columns.size
 
-        val summarySql = """
-            SELECT
-                SUM(CASE WHEN l."$firstPk" IS NULL THEN 1 ELSE 0 END),
-                SUM(CASE WHEN r."$firstPk" IS NULL THEN 1 ELSE 0 END),
-                SUM(CASE WHEN l."$firstPk" IS NOT NULL AND r."$firstPk" IS NOT NULL THEN 1 ELSE 0 END)
-            FROM '$leftUri' l
-            FULL OUTER JOIN '$rightUri' r ON $pkJoin
-            WHERE l."$firstPk" IS NULL
-               OR r."$firstPk" IS NULL
-               OR ($changeCondition)
-        """.trimIndent()
-
-        val summaryRow = queryEngine.executeQuery(summarySql, storageConfig, 1, 0).rows.firstOrNull()
+        val firstRow = result.rows.firstOrNull()
+        val totalRows = (firstRow?.get(0) as? Number)?.toLong() ?: 0
         val summary = DiffSummary(
-            added = (summaryRow?.get(0) as? Number)?.toLong() ?: 0,
-            removed = (summaryRow?.get(1) as? Number)?.toLong() ?: 0,
-            changed = (summaryRow?.get(2) as? Number)?.toLong() ?: 0,
+            added = (firstRow?.get(1) as? Number)?.toLong() ?: 0,
+            removed = (firstRow?.get(2) as? Number)?.toLong() ?: 0,
+            changed = (firstRow?.get(3) as? Number)?.toLong() ?: 0,
         )
 
+        // Skip first 4 columns (total, added, removed, changed) + _diff_type
+        val metaColCount = 4
         val diffRows = result.rows.map { row ->
-            val diffType = row[0] as String
-            val leftValues = row.subList(1, 1 + colCount)
-            val rightValues = row.subList(1 + colCount, 1 + 2 * colCount)
+            val diffType = row[metaColCount] as String
+            val leftValues = row.subList(metaColCount + 1, metaColCount + 1 + colCount)
+            val rightValues = row.subList(metaColCount + 1 + colCount, metaColCount + 1 + 2 * colCount)
 
             when (diffType) {
                 "ADDED" -> DiffRow.Added(rightValues)
@@ -210,7 +225,7 @@ class CompareService(
             }
         }
 
-        return UnifiedDiffResult(columns, primaryKeys, diffRows, result.totalRows, summary)
+        return UnifiedDiffResult(columns, primaryKeys, diffRows, totalRows, summary)
     }
 
     private fun compareWithExcept(
@@ -221,34 +236,46 @@ class CompareService(
         limit: Int,
         offset: Int,
     ): UnifiedDiffResult {
-        val unionSql = """
-            SELECT 'REMOVED' as _diff_type, * FROM (SELECT * FROM '$leftUri' EXCEPT SELECT * FROM '$rightUri')
-            UNION ALL
-            SELECT 'ADDED' as _diff_type, * FROM (SELECT * FROM '$rightUri' EXCEPT SELECT * FROM '$leftUri')
+        val allCols = columns.joinToString(", ") { "\"${escapeIdentifier(it.name)}\"" }
+
+        // Single CTE: compute diff + summary in one scan
+        val sql = """
+            WITH diff AS (
+                SELECT 'REMOVED' as _diff_type, $allCols FROM (SELECT * FROM '$leftUri' EXCEPT SELECT * FROM '$rightUri')
+                UNION ALL
+                SELECT 'ADDED' as _diff_type, $allCols FROM (SELECT * FROM '$rightUri' EXCEPT SELECT * FROM '$leftUri')
+            )
+            SELECT
+                (SELECT COUNT(*) FROM diff) as _total,
+                (SELECT COUNT(*) FILTER (WHERE _diff_type = 'ADDED') FROM diff) as _added,
+                (SELECT COUNT(*) FILTER (WHERE _diff_type = 'REMOVED') FROM diff) as _removed,
+                d.*
+            FROM diff d
+            ORDER BY _diff_type, $allCols
         """.trimIndent()
 
-        val result = queryEngine.executeQuery(unionSql, storageConfig, limit, offset)
+        val result = queryEngine.executeQuery(sql, storageConfig, limit, offset)
 
-        val addedCount = queryEngine.executeQuery(
-            "SELECT COUNT(*) FROM (SELECT * FROM '$rightUri' EXCEPT SELECT * FROM '$leftUri')",
-            storageConfig, 1, 0,
-        ).rows.firstOrNull()?.get(0) as? Number ?: 0
-        val removedCount = queryEngine.executeQuery(
-            "SELECT COUNT(*) FROM (SELECT * FROM '$leftUri' EXCEPT SELECT * FROM '$rightUri')",
-            storageConfig, 1, 0,
-        ).rows.firstOrNull()?.get(0) as? Number ?: 0
+        val firstRow = result.rows.firstOrNull()
+        val totalRows = (firstRow?.get(0) as? Number)?.toLong() ?: 0
+        val addedCount = (firstRow?.get(1) as? Number)?.toLong() ?: 0
+        val removedCount = (firstRow?.get(2) as? Number)?.toLong() ?: 0
 
+        // Skip first 3 meta columns (total, added, removed) + _diff_type
+        val metaColCount = 3
         val diffRows = result.rows.map { row ->
-            val diffType = row[0] as String
-            val values = row.subList(1, row.size)
+            val diffType = row[metaColCount] as String
+            val values = row.subList(metaColCount + 1, row.size)
             if (diffType == "ADDED") DiffRow.Added(values) else DiffRow.Removed(values)
         }
 
         return UnifiedDiffResult(
-            columns, emptyList(), diffRows, result.totalRows,
-            DiffSummary(added = addedCount.toLong(), removed = removedCount.toLong(), changed = 0),
+            columns, emptyList(), diffRows, totalRows,
+            DiffSummary(added = addedCount, removed = removedCount, changed = 0),
         )
     }
+
+    private fun escapeIdentifier(name: String): String = name.replace("\"", "\"\"")
 
     private fun resolveTableUri(snapshotId: SnapshotId, tableName: String): String {
         val snapshot = loadSnapshotPort.findById(snapshotId)

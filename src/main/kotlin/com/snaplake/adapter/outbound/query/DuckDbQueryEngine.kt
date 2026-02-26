@@ -165,7 +165,7 @@ class DuckDbQueryEngine : QueryEngine {
             }
         }
 
-        if (!normalizedSql.startsWith("SELECT")) {
+        if (!normalizedSql.startsWith("SELECT") && !normalizedSql.startsWith("WITH")) {
             throw IllegalArgumentException("Only SELECT queries are allowed")
         }
     }

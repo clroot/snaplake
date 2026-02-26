@@ -264,4 +264,6 @@ databaseChangeLog:
               - column:
                   name: primary_keys
                   type: TEXT
+                  constraints:
+                    nullable: false
                   defaultValue: "[]"
