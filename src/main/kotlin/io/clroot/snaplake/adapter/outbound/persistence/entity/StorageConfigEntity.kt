@@ -21,9 +21,9 @@ class StorageConfigEntity(
     @Column(name = "s3_endpoint")
     val s3Endpoint: String?,
     @Column(name = "s3_access_key")
-    val s3AccessKey: String?,
+    var s3AccessKey: String?,
     @Column(name = "s3_secret_key")
-    val s3SecretKey: String?,
+    var s3SecretKey: String?,
     @Column(name = "updated_at", nullable = false)
     val updatedAt: String,
 )
