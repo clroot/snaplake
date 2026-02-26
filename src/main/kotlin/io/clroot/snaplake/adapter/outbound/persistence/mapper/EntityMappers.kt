@@ -88,7 +88,7 @@ class StorageConfigMapper(
     private val encryptionPort: EncryptionPort,
 ) {
     companion object {
-        private const val ENCRYPTED_PREFIX = "ENC:"
+        internal const val ENCRYPTED_PREFIX = "ENC:"
     }
 
     fun toEntity(config: StorageConfig): StorageConfigEntity =

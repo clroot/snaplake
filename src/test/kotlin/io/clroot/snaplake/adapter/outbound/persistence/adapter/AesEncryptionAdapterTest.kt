@@ -34,6 +34,17 @@ class AesEncryptionAdapterTest :
             }
         }
 
+        describe("키가 16바이트 미만인 경우") {
+            it("IllegalArgumentException을 던진다") {
+                shouldThrow<IllegalArgumentException> {
+                    AesEncryptionAdapter(
+                        configuredKey = "short-key",
+                        activeProfiles = arrayOf(),
+                    )
+                }.message shouldContain "Encryption key must be at least 16 bytes"
+            }
+        }
+
         describe("키가 미설정 + dev 프로필") {
             it("기본 키로 정상 동작한다") {
                 val adapter = AesEncryptionAdapter(

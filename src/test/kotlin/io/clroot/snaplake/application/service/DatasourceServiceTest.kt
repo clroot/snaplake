@@ -112,6 +112,32 @@ class DatasourceServiceTest :
                 }
             }
 
+            context("이름에 경로 문자가 포함된 경우") {
+                it("IllegalArgumentException을 던진다") {
+                    every { loadDatasourcePort.findById(existingId) } returns existing
+
+                    listOf("../evil-name", "path/name", "path\\name", "name..trick").forEach { invalidName ->
+                        shouldThrow<IllegalArgumentException> {
+                            sut.update(
+                                existingId,
+                                UpdateDatasourceUseCase.Command(
+                                    name = invalidName,
+                                    type = DatabaseType.POSTGRESQL,
+                                    host = "localhost",
+                                    port = 5432,
+                                    database = "mydb",
+                                    username = "user",
+                                    password = null,
+                                    schemas = listOf("public"),
+                                    cronExpression = null,
+                                    retentionPolicy = RetentionPolicy(),
+                                ),
+                            )
+                        }
+                    }
+                }
+            }
+
             context("존재하지 않는 datasource인 경우") {
                 it("DatasourceNotFoundException을 던진다") {
                     val nonExistentId = DatasourceId.generate()

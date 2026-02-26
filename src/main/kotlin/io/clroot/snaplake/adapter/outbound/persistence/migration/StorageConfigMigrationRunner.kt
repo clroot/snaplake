@@ -1,5 +1,6 @@
 package io.clroot.snaplake.adapter.outbound.persistence.migration
 
+import io.clroot.snaplake.adapter.outbound.persistence.mapper.StorageConfigMapper.Companion.ENCRYPTED_PREFIX
 import io.clroot.snaplake.adapter.outbound.persistence.repository.StorageConfigJpaRepository
 import io.clroot.snaplake.application.port.outbound.EncryptionPort
 import org.springframework.boot.ApplicationArguments
@@ -11,10 +12,6 @@ class StorageConfigMigrationRunner(
     private val repository: StorageConfigJpaRepository,
     private val encryptionPort: EncryptionPort,
 ) : ApplicationRunner {
-    companion object {
-        private const val ENCRYPTED_PREFIX = "ENC:"
-    }
-
     override fun run(args: ApplicationArguments) {
         val entity = repository.findById(1).orElse(null) ?: return
         var updated = false

@@ -47,6 +47,7 @@ class AesEncryptionAdapter @Autowired constructor(
                 }
             } else {
                 val decoded = configuredKey.toByteArray()
+                require(decoded.size >= 16) { "Encryption key must be at least 16 bytes" }
                 if (decoded.size < KEY_LENGTH) {
                     decoded.copyOf(KEY_LENGTH)
                 } else {

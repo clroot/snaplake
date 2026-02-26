@@ -9,6 +9,7 @@ import io.clroot.snaplake.application.port.inbound.TestStorageConnectionUseCase
 import io.clroot.snaplake.application.port.inbound.UpdateStorageSettingsUseCase
 import io.clroot.snaplake.config.StorageProviderConfig
 import io.clroot.snaplake.domain.model.StorageType
+import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -30,7 +31,7 @@ class StorageController(
 
     @PutMapping
     fun updateSettings(
-        @RequestBody request: UpdateStorageSettingsRequest,
+        @RequestBody @Valid request: UpdateStorageSettingsRequest,
     ): ResponseEntity<StorageSettingsResponse> {
         val storageType = StorageType.valueOf(request.storageType.uppercase())
         val config =

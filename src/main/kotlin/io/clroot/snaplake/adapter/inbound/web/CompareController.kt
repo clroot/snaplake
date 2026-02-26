@@ -7,6 +7,7 @@ import io.clroot.snaplake.application.port.inbound.CompareSchemaUseCase
 import io.clroot.snaplake.application.port.inbound.CompareStatsUseCase
 import io.clroot.snaplake.application.port.inbound.CompareUnifiedDiffUseCase
 import io.clroot.snaplake.domain.vo.SnapshotId
+import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -24,7 +25,7 @@ class CompareController(
 ) {
     @PostMapping("/stats")
     fun compareStats(
-        @RequestBody request: CompareStatsRequest,
+        @RequestBody @Valid request: CompareStatsRequest,
     ): ResponseEntity<StatsResultResponse> {
         val result =
             compareStatsUseCase.compareStats(
@@ -39,7 +40,7 @@ class CompareController(
 
     @PostMapping("/rows")
     fun compareRows(
-        @RequestBody request: CompareRowsRequest,
+        @RequestBody @Valid request: CompareRowsRequest,
     ): ResponseEntity<RowsCompareResultResponse> {
         val result =
             compareRowsUseCase.compareRows(
@@ -56,7 +57,7 @@ class CompareController(
 
     @PostMapping("/unified-diff")
     fun unifiedDiff(
-        @RequestBody request: UnifiedDiffRequest,
+        @RequestBody @Valid request: UnifiedDiffRequest,
     ): ResponseEntity<UnifiedDiffResponse> {
         val result =
             compareUnifiedDiffUseCase.compareUnifiedDiff(
@@ -73,7 +74,7 @@ class CompareController(
 
     @PostMapping("/schema")
     fun compareSchema(
-        @RequestBody request: CompareSchemaRequest,
+        @RequestBody @Valid request: CompareSchemaRequest,
     ): ResponseEntity<SchemaChangeResultResponse> {
         val result =
             compareSchemaUseCase.compareSchema(
@@ -87,7 +88,7 @@ class CompareController(
 
     @PostMapping("/diff")
     fun compareDiff(
-        @RequestBody request: CompareDiffRequest,
+        @RequestBody @Valid request: CompareDiffRequest,
     ): ResponseEntity<QueryResultResponse> {
         val result =
             compareDiffUseCase.compareDiff(

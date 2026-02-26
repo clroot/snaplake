@@ -1,6 +1,7 @@
 package io.clroot.snaplake.adapter.inbound.web.dto
 
 import io.clroot.snaplake.domain.model.StorageConfig
+import jakarta.validation.constraints.NotBlank
 
 data class StorageSettingsResponse(
     val type: String,
@@ -31,7 +32,7 @@ data class StorageSettingsResponse(
 }
 
 data class UpdateStorageSettingsRequest(
-    val storageType: String,
+    @field:NotBlank val storageType: String,
     val localPath: String?,
     val s3Bucket: String?,
     val s3Region: String?,

@@ -1,26 +1,28 @@
 package io.clroot.snaplake.adapter.inbound.web.dto
 
 import io.clroot.snaplake.application.port.inbound.*
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotEmpty
 
 data class CompareStatsRequest(
-    val leftSnapshotId: String,
-    val rightSnapshotId: String,
-    val tableName: String,
+    @field:NotBlank val leftSnapshotId: String,
+    @field:NotBlank val rightSnapshotId: String,
+    @field:NotBlank val tableName: String,
 )
 
 data class CompareRowsRequest(
-    val leftSnapshotId: String,
-    val rightSnapshotId: String,
-    val tableName: String,
+    @field:NotBlank val leftSnapshotId: String,
+    @field:NotBlank val rightSnapshotId: String,
+    @field:NotBlank val tableName: String,
     val limit: Int = 100,
     val offset: Int = 0,
 )
 
 data class CompareDiffRequest(
-    val leftSnapshotId: String,
-    val rightSnapshotId: String,
-    val tableName: String,
-    val primaryKeys: List<String>,
+    @field:NotBlank val leftSnapshotId: String,
+    @field:NotBlank val rightSnapshotId: String,
+    @field:NotBlank val tableName: String,
+    @field:NotEmpty val primaryKeys: List<String>,
     val limit: Int = 100,
     val offset: Int = 0,
 )
@@ -73,9 +75,9 @@ data class RowsCompareResultResponse(
 }
 
 data class UnifiedDiffRequest(
-    val leftSnapshotId: String,
-    val rightSnapshotId: String,
-    val tableName: String,
+    @field:NotBlank val leftSnapshotId: String,
+    @field:NotBlank val rightSnapshotId: String,
+    @field:NotBlank val tableName: String,
     val limit: Int = 100,
     val offset: Int = 0,
 )
@@ -139,8 +141,8 @@ data class ColumnResponse(
 )
 
 data class CompareSchemaRequest(
-    val leftSnapshotId: String,
-    val rightSnapshotId: String,
+    @field:NotBlank val leftSnapshotId: String,
+    @field:NotBlank val rightSnapshotId: String,
 )
 
 data class ColumnInfoResponse(

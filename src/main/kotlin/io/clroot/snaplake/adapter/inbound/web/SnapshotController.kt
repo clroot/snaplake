@@ -8,6 +8,7 @@ import io.clroot.snaplake.application.port.inbound.TakeSnapshotUseCase
 import io.clroot.snaplake.application.port.inbound.UpdateSnapshotMetadataUseCase
 import io.clroot.snaplake.domain.vo.DatasourceId
 import io.clroot.snaplake.domain.vo.SnapshotId
+import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -51,7 +52,7 @@ class SnapshotController(
     @PatchMapping("/snapshots/{id}/metadata")
     fun updateMetadata(
         @PathVariable id: String,
-        @RequestBody request: UpdateSnapshotMetadataRequest,
+        @RequestBody @Valid request: UpdateSnapshotMetadataRequest,
     ): ResponseEntity<SnapshotResponse> {
         val snapshot =
             updateSnapshotMetadataUseCase.updateMetadata(
