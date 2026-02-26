@@ -138,7 +138,7 @@ export function SnapshotChip({
             zIndex: 10,
             width: "18rem",
             padding: "0.75rem",
-            backgroundColor: "var(--cds-layer-01)",
+            backgroundColor: "var(--cds-layer-02)",
             border: "1px solid var(--cds-border-subtle)",
             boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
             display: "flex",
