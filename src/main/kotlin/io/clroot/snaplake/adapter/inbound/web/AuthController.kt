@@ -5,6 +5,7 @@ import io.clroot.snaplake.adapter.inbound.web.dto.LoginRequest
 import io.clroot.snaplake.adapter.inbound.web.dto.LoginResponse
 import io.clroot.snaplake.application.port.inbound.ChangePasswordUseCase
 import io.clroot.snaplake.application.port.inbound.LoginUseCase
+import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.bind.annotation.PostMapping
@@ -20,7 +21,7 @@ class AuthController(
 ) {
     @PostMapping("/login")
     fun login(
-        @RequestBody request: LoginRequest,
+        @RequestBody @Valid request: LoginRequest,
     ): ResponseEntity<LoginResponse> {
         val result =
             loginUseCase.login(
@@ -39,7 +40,7 @@ class AuthController(
 
     @PostMapping("/change-password")
     fun changePassword(
-        @RequestBody request: ChangePasswordRequest,
+        @RequestBody @Valid request: ChangePasswordRequest,
     ): ResponseEntity<Void> {
         val username =
             SecurityContextHolder.getContext().authentication?.name

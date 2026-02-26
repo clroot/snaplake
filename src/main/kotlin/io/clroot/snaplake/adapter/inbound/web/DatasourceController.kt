@@ -8,6 +8,7 @@ import io.clroot.snaplake.application.port.inbound.*
 import io.clroot.snaplake.domain.model.DatabaseType
 import io.clroot.snaplake.domain.model.RetentionPolicy
 import io.clroot.snaplake.domain.vo.DatasourceId
+import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -38,7 +39,7 @@ class DatasourceController(
 
     @PostMapping
     fun register(
-        @RequestBody request: RegisterDatasourceRequest,
+        @RequestBody @Valid request: RegisterDatasourceRequest,
     ): ResponseEntity<DatasourceResponse> {
         val datasource =
             registerDatasourceUseCase.register(
@@ -66,7 +67,7 @@ class DatasourceController(
     @PutMapping("/{id}")
     fun update(
         @PathVariable id: String,
-        @RequestBody request: UpdateDatasourceRequest,
+        @RequestBody @Valid request: UpdateDatasourceRequest,
     ): ResponseEntity<DatasourceResponse> {
         val datasource =
             updateDatasourceUseCase.update(

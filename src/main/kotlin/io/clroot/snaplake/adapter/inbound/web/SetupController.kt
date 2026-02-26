@@ -9,6 +9,7 @@ import io.clroot.snaplake.adapter.outbound.storage.S3StorageAdapter
 import io.clroot.snaplake.application.port.inbound.GetSetupStatusUseCase
 import io.clroot.snaplake.application.port.inbound.InitializeSystemUseCase
 import io.clroot.snaplake.domain.model.StorageType
+import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -26,7 +27,7 @@ class SetupController(
 
     @PostMapping("/initialize")
     fun initialize(
-        @RequestBody request: InitializeRequest,
+        @RequestBody @Valid request: InitializeRequest,
     ): ResponseEntity<Any> {
         val storageType =
             try {
@@ -53,7 +54,7 @@ class SetupController(
 
     @PostMapping("/test-storage")
     fun testStorage(
-        @RequestBody request: TestStorageRequest,
+        @RequestBody @Valid request: TestStorageRequest,
     ): ResponseEntity<StorageTestResponse> {
         val storageType =
             try {

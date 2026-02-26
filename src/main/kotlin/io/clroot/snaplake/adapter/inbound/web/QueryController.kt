@@ -8,6 +8,7 @@ import io.clroot.snaplake.application.port.inbound.DescribeTableUseCase
 import io.clroot.snaplake.application.port.inbound.ExecuteQueryUseCase
 import io.clroot.snaplake.application.port.inbound.PreviewTableUseCase
 import io.clroot.snaplake.domain.vo.SnapshotId
+import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -20,7 +21,7 @@ class QueryController(
 ) {
     @PostMapping("/query")
     fun executeQuery(
-        @RequestBody request: ExecuteQueryRequest,
+        @RequestBody @Valid request: ExecuteQueryRequest,
     ): ResponseEntity<QueryResultResponse> {
         val context =
             request.context?.let { ctx ->

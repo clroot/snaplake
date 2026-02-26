@@ -6,6 +6,7 @@ import io.clroot.snaplake.domain.exception.*
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 
@@ -30,6 +31,19 @@ class GlobalExceptionHandler {
         log.warn("Domain exception: {} - {}", e.code, e.message)
         return ResponseEntity.status(status).body(
             ApiResponse(success = false, error = ApiError(code = e.code, message = e.message)),
+        )
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException::class)
+    fun handleValidationException(e: MethodArgumentNotValidException): ResponseEntity<ApiResponse<Map<String, String>>> {
+        val errors = e.bindingResult.fieldErrors.associate { it.field to (it.defaultMessage ?: "Invalid value") }
+        log.warn("Validation error: {}", errors)
+        return ResponseEntity.badRequest().body(
+            ApiResponse(
+                success = false,
+                data = errors,
+                error = ApiError(code = "VALIDATION_ERROR", message = "입력값이 올바르지 않습니다"),
+            ),
         )
     }
 
