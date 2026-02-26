@@ -52,6 +52,9 @@ class DatasourceService(
                 ?: throw DatasourceNotFoundException(id)
 
         require(command.name.isNotBlank()) { "Datasource name must not be blank" }
+        require(!command.name.contains("..") && !command.name.contains('/') && !command.name.contains('\\')) {
+            "Datasource name must not contain path characters (/, \\, ..)"
+        }
         require(command.host.isNotBlank()) { "Host must not be blank" }
         require(command.port in 1..65535) { "Port must be between 1 and 65535" }
         require(command.database.isNotBlank()) { "Database name must not be blank" }

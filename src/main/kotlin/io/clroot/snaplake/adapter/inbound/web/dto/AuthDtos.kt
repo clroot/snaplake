@@ -6,7 +6,7 @@ import java.time.Instant
 
 data class LoginRequest(
     @field:NotBlank val username: String,
-    @field:NotBlank val password: String,
+    @field:NotBlank @field:Size(min = 4) val password: String,
 )
 
 data class LoginResponse(
