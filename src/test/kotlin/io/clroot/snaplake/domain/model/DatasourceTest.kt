@@ -47,6 +47,26 @@ class DatasourceTest :
                 }
             }
 
+            context("이름에 경로 문자가 포함된 경우") {
+                listOf("../hack", "foo/bar", "a\\b", "test/../etc").forEach { invalidName ->
+                    it("'$invalidName'은 IllegalArgumentException을 던진다") {
+                        shouldThrow<IllegalArgumentException> {
+                            Datasource.create(
+                                name = invalidName,
+                                type = DatabaseType.POSTGRESQL,
+                                host = "localhost",
+                                port = 5432,
+                                database = "mydb",
+                                username = "user",
+                                encryptedPassword = "encrypted",
+                                schemas = listOf("public"),
+                                cronExpression = null,
+                            )
+                        }
+                    }
+                }
+            }
+
             context("schemas가 비어있는 경우") {
                 it("IllegalArgumentException을 던진다") {
                     shouldThrow<IllegalArgumentException> {

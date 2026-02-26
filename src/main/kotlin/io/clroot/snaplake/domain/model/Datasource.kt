@@ -63,6 +63,9 @@ class Datasource private constructor(
             includedTables: Map<String, List<String>> = emptyMap(),
         ): Datasource {
             require(name.isNotBlank()) { "Datasource name must not be blank" }
+            require(!name.contains("..") && !name.contains('/') && !name.contains('\\')) {
+                "Datasource name must not contain path characters (/, \\, ..)"
+            }
             require(host.isNotBlank()) { "Host must not be blank" }
             require(port in 1..65535) { "Port must be between 1 and 65535" }
             require(database.isNotBlank()) { "Database name must not be blank" }
