@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <springProperty scope="context" name="DATA_DIR" source="snaplake.data-dir" defaultValue="./data"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) [%X{requestId:-system}] %cyan(%-40.40logger{39}) : %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${DATA_DIR}/logs/snaplake.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${DATA_DIR}/logs/snaplake.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>500MB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{requestId:-system}] [%X{user:-anonymous}] %logger{36} : %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+
+    <logger name="org.hibernate" level="WARN"/>
+    <logger name="org.springframework.security" level="WARN"/>
+    <logger name="org.apache.catalina" level="WARN"/>
+    <logger name="org.springframework.web.servlet.resource" level="WARN"/>
+    <logger name="liquibase" level="INFO"/>
+
+    <logger name="io.clroot.snaplake" level="INFO"/>
+    <logger name="io.clroot.snaplake.adapter.outbound" level="DEBUG"/>
+</configuration>

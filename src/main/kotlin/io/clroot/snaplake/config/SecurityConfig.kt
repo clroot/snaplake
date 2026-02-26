@@ -4,6 +4,7 @@ import io.clroot.snaplake.application.port.outbound.LoadUserPort
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.slf4j.MDC
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
@@ -80,6 +81,7 @@ class JwtAuthenticationFilter(
                             authorities,
                         )
                     SecurityContextHolder.getContext().authentication = authentication
+                    MDC.put("user", user.username)
                 }
             }
         }
