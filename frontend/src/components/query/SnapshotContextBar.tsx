@@ -64,6 +64,8 @@ export function SnapshotContextBar({
 
   return (
     <div style={{
+      position: "relative",
+      zIndex: 10,
       display: "flex",
       alignItems: "center",
       gap: "0.5rem",
