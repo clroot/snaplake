@@ -40,31 +40,29 @@ class MdcFilter : OncePerRequestFilter() {
 
     override fun shouldNotFilter(request: HttpServletRequest): Boolean {
         val path = request.requestURI
-        return path.startsWith("/assets/") ||
-            path.startsWith("/favicon") ||
-            path.endsWith(".js") ||
-            path.endsWith(".css") ||
-            path.endsWith(".png") ||
-            path.endsWith(".jpg") ||
-            path.endsWith(".svg") ||
-            path.endsWith(".ico") ||
-            path.endsWith(".woff") ||
-            path.endsWith(".woff2") ||
-            path == "/health"
+        return EXCLUDED_PATHS.contains(path) ||
+            STATIC_RESOURCE_PREFIXES.any { path.startsWith(it) } ||
+            STATIC_RESOURCE_EXTENSIONS.any { path.endsWith(it) }
     }
 
     private fun sanitizeRequestId(header: String?): String {
         if (header == null) {
-            return UUID.randomUUID().toString().replace("-", "").take(16)
+            return generateRequestId()
         }
         val sanitized = header.take(36).replace(INVALID_ID_CHARS, "")
         if (sanitized.isEmpty()) {
-            return UUID.randomUUID().toString().replace("-", "").take(16)
+            return generateRequestId()
         }
         return sanitized
     }
 
+    private fun generateRequestId(): String =
+        UUID.randomUUID().toString().replace("-", "").take(16)
+
     companion object {
         private val INVALID_ID_CHARS = Regex("[^a-zA-Z0-9\\-]")
+        private val STATIC_RESOURCE_PREFIXES = listOf("/assets/", "/favicon")
+        private val STATIC_RESOURCE_EXTENSIONS = listOf(".js", ".css", ".png", ".jpg", ".svg", ".ico", ".woff", ".woff2")
+        private val EXCLUDED_PATHS = listOf("/health")
     }
 }
