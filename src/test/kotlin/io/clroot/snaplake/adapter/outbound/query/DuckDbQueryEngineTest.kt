@@ -169,6 +169,74 @@ class DuckDbQueryEngineTest :
             }
         }
 
+        describe("previewTable orderBy 검증") {
+            it("유효한 컬럼명은 통과한다") {
+                val tempParquet = createTestParquet()
+                try {
+                    val result =
+                        engine.previewTable(
+                            uri = tempParquet.toAbsolutePath().toString(),
+                            storageConfig = null,
+                            orderBy = "id ASC",
+                            limit = 10,
+                        )
+                    result.rows shouldHaveSize 3
+                    result.rows[0][0] shouldBe 1
+                } finally {
+                    Files.deleteIfExists(tempParquet)
+                }
+            }
+
+            it("다중 정렬도 통과한다") {
+                val tempParquet = createTestParquet()
+                try {
+                    val result =
+                        engine.previewTable(
+                            uri = tempParquet.toAbsolutePath().toString(),
+                            storageConfig = null,
+                            orderBy = "id DESC, name ASC",
+                            limit = 10,
+                        )
+                    result.rows shouldHaveSize 3
+                    result.rows[0][0] shouldBe 3
+                } finally {
+                    Files.deleteIfExists(tempParquet)
+                }
+            }
+
+            it("SQL injection 시도를 거부한다") {
+                val tempParquet = createTestParquet()
+                try {
+                    shouldThrow<IllegalArgumentException> {
+                        engine.previewTable(
+                            uri = tempParquet.toAbsolutePath().toString(),
+                            storageConfig = null,
+                            orderBy = "id; DROP TABLE users--",
+                            limit = 10,
+                        )
+                    }
+                } finally {
+                    Files.deleteIfExists(tempParquet)
+                }
+            }
+
+            it("서브쿼리 시도를 거부한다") {
+                val tempParquet = createTestParquet()
+                try {
+                    shouldThrow<IllegalArgumentException> {
+                        engine.previewTable(
+                            uri = tempParquet.toAbsolutePath().toString(),
+                            storageConfig = null,
+                            orderBy = "(SELECT 1)",
+                            limit = 10,
+                        )
+                    }
+                } finally {
+                    Files.deleteIfExists(tempParquet)
+                }
+            }
+        }
+
         describe("countRows") {
             it("Parquet 파일의 행 수를 반환한다") {
                 val tempParquet = createTestParquet()

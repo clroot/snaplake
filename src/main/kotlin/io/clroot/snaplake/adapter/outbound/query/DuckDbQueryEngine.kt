@@ -94,7 +94,7 @@ class DuckDbQueryEngine : QueryEngine {
             buildString {
                 append(baseSql)
                 if (!orderBy.isNullOrBlank()) {
-                    append(" ORDER BY $orderBy")
+                    append(" ORDER BY ${sanitizeOrderBy(orderBy)}")
                 }
                 append(" LIMIT $limit OFFSET $offset")
             }
@@ -155,6 +155,29 @@ class DuckDbQueryEngine : QueryEngine {
         }
 
         return conn
+    }
+
+    private fun sanitizeOrderBy(orderBy: String): String {
+        val pattern =
+            Regex(
+                """^\s*"([a-zA-Z_][a-zA-Z0-9_ ]*)"\s*(ASC|DESC)?\s*$|^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*(ASC|DESC)?\s*$""",
+                RegexOption.IGNORE_CASE,
+            )
+        return orderBy.split(",").map { part ->
+            val match =
+                pattern.matchEntire(part.trim())
+                    ?: throw IllegalArgumentException("Invalid ORDER BY clause: ${part.trim()}")
+            val col: String
+            val dir: String
+            if (match.groupValues[1].isNotEmpty()) {
+                col = match.groupValues[1].trim().replace("\"", "\"\"")
+                dir = match.groupValues[2].uppercase().ifEmpty { "ASC" }
+            } else {
+                col = match.groupValues[3].trim()
+                dir = match.groupValues[4].uppercase().ifEmpty { "ASC" }
+            }
+            "\"$col\" $dir"
+        }.joinToString(", ")
     }
 
     private fun validateQuery(sql: String) {
