@@ -10,21 +10,27 @@ import kotlin.io.path.isDirectory
 class LocalStorageAdapter(
     private val basePath: String,
 ) : StorageProvider {
-    private val root: Path = Path.of(basePath)
+    private val root: Path = Path.of(basePath).normalize().toAbsolutePath()
+
+    private fun safePath(path: String): Path {
+        val resolved = root.resolve(path).normalize().toAbsolutePath()
+        require(resolved.startsWith(root)) { "Path traversal detected: $path" }
+        return resolved
+    }
 
     override fun write(
         path: String,
         data: ByteArray,
     ) {
-        val target = root.resolve(path)
+        val target = safePath(path)
         Files.createDirectories(target.parent)
         Files.write(target, data, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
     }
 
-    override fun read(path: String): ByteArray = Files.readAllBytes(root.resolve(path))
+    override fun read(path: String): ByteArray = Files.readAllBytes(safePath(path))
 
     override fun list(prefix: String): List<String> {
-        val dir = root.resolve(prefix)
+        val dir = safePath(prefix)
         if (!dir.exists() || !dir.isDirectory()) return emptyList()
 
         return Files
@@ -35,12 +41,12 @@ class LocalStorageAdapter(
     }
 
     override fun delete(path: String) {
-        val target = root.resolve(path)
+        val target = safePath(path)
         Files.deleteIfExists(target)
     }
 
     override fun deleteAll(prefix: String) {
-        val dir = root.resolve(prefix)
+        val dir = safePath(prefix)
         if (!dir.exists()) return
 
         Files
@@ -49,14 +55,9 @@ class LocalStorageAdapter(
             .forEach { Files.deleteIfExists(it) }
     }
 
-    override fun exists(path: String): Boolean = root.resolve(path).exists()
+    override fun exists(path: String): Boolean = safePath(path).exists()
 
-    override fun getUri(path: String): String =
-        root
-            .resolve(path)
-            .toAbsolutePath()
-            .normalize()
-            .toString()
+    override fun getUri(path: String): String = safePath(path).toString()
 
     override fun testConnection(): Boolean =
         try {

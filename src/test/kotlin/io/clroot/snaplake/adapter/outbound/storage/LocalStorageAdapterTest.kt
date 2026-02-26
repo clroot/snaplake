@@ -1,5 +1,6 @@
 package io.clroot.snaplake.adapter.outbound.storage
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
@@ -88,6 +89,62 @@ class LocalStorageAdapterTest :
         describe("testConnection") {
             it("쓰기 가능한 디렉토리면 true를 반환한다") {
                 adapter.testConnection() shouldBe true
+            }
+        }
+
+        describe("path traversal 방어") {
+            val traversalPath = "../etc/passwd"
+
+            it("write에서 path traversal을 차단한다") {
+                shouldThrow<IllegalArgumentException> {
+                    adapter.write(traversalPath, byteArrayOf(1))
+                }.message shouldContain "Path traversal detected"
+            }
+
+            it("read에서 path traversal을 차단한다") {
+                shouldThrow<IllegalArgumentException> {
+                    adapter.read(traversalPath)
+                }.message shouldContain "Path traversal detected"
+            }
+
+            it("delete에서 path traversal을 차단한다") {
+                shouldThrow<IllegalArgumentException> {
+                    adapter.delete(traversalPath)
+                }.message shouldContain "Path traversal detected"
+            }
+
+            it("deleteAll에서 path traversal을 차단한다") {
+                shouldThrow<IllegalArgumentException> {
+                    adapter.deleteAll(traversalPath)
+                }.message shouldContain "Path traversal detected"
+            }
+
+            it("list에서 path traversal을 차단한다") {
+                shouldThrow<IllegalArgumentException> {
+                    adapter.list(traversalPath)
+                }.message shouldContain "Path traversal detected"
+            }
+
+            it("exists에서 path traversal을 차단한다") {
+                shouldThrow<IllegalArgumentException> {
+                    adapter.exists(traversalPath)
+                }.message shouldContain "Path traversal detected"
+            }
+
+            it("getUri에서 path traversal을 차단한다") {
+                shouldThrow<IllegalArgumentException> {
+                    adapter.getUri(traversalPath)
+                }.message shouldContain "Path traversal detected"
+            }
+
+            it("정상 경로는 허용한다") {
+                adapter.write("safe/path/file.parquet", byteArrayOf(1))
+                adapter.exists("safe/path/file.parquet") shouldBe true
+            }
+
+            it("../가 포함되어도 normalize 후 root 내부면 허용한다") {
+                adapter.write("a/b/../c/file.parquet", byteArrayOf(1))
+                adapter.exists("a/c/file.parquet") shouldBe true
             }
         }
     })
