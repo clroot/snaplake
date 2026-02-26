@@ -5,33 +5,32 @@
 [![Docker Image Version](https://img.shields.io/docker/v/abcdkh1209/snaplake?sort=semver&label=Docker%20Hub)](https://hub.docker.com/r/abcdkh1209/snaplake)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-셀프 호스팅 데이터베이스 스냅샷 관리 플랫폼. PostgreSQL과 MySQL 데이터베이스의 특정 시점 스냅샷을 Parquet 파일로 캡처하고, 로컬 또는 S3에 저장하며, DuckDB 기반 SQL로 스냅샷을 조회하고 비교할 수 있습니다.
+백업 복원 없이 과거 DB 데이터를 SQL로 조회하는 셀프호스팅 도구. PostgreSQL과 MySQL 테이블을 주기적으로 Parquet 파일로 스냅샷하고, DuckDB 기반 SQL로 아무 시점이나 조회할 수 있습니다.
 
 ![Dashboard](docs/screenshots/features/dashboard.png)
 
 ## 주요 기능
 
-### 데이터베이스 스냅샷
-
-테이블 전체를 Apache Parquet 파일로 캡처합니다. 필터링, 정렬, CSV/JSON 내보내기로 스냅샷 내용을 탐색할 수 있습니다.
-
-![Snapshot Browser](docs/screenshots/features/snapshots.png)
-
 ### SQL 쿼리 엔진
 
-DuckDB를 사용하여 모든 스냅샷에 SQL 쿼리를 실행합니다. 테이블 조인, 데이터 집계, 결과 내보내기가 가능합니다.
+DuckDB를 사용하여 모든 스냅샷에 SQL 쿼리를 실행합니다. 조인, 집계, 필터링, CSV/JSON 내보내기를 지원합니다.
 
 ![SQL Query](docs/screenshots/features/query.png)
 
 ### 스냅샷 비교
 
-두 스냅샷을 나란히 비교하여 행 단위 차이를 확인합니다. 추가, 삭제, 변경된 행을 색상으로 구분하여 즉시 파악할 수 있습니다.
+두 스냅샷을 나란히 비교하여 행 단위 차이를 확인합니다. 추가, 삭제, 변경된 행을 색상으로 구분합니다.
 
 ![Compare Diff](docs/screenshots/features/compare-diff.png)
 
+### 자동 스냅샷
+
+Cron 스케줄에 따라 테이블 전체를 Apache Parquet 파일로 캡처합니다. 필터링, 정렬, CSV/JSON 내보내기로 스냅샷 내용을 탐색할 수 있습니다.
+
+![Snapshot Browser](docs/screenshots/features/snapshots.png)
+
 ### 기타 기능
 
-- **예약 스냅샷** — 데이터소스별 Cron 기반 자동 스냅샷
 - **보존 정책** — 일별/월별 보존 제한으로 스토리지 자동 관리
 - **유연한 스토리지** — 로컬 파일 시스템 또는 S3 호환 오브젝트 스토리지 (AWS S3, MinIO 등)
 - **설정 마법사** — 관리자 계정, 스토리지, 첫 데이터소스 설정을 안내하는 초기 설정 가이드
@@ -101,6 +100,22 @@ cd frontend && bun install && bun run dev
 | `SNAPLAKE_ENCRYPTION_KEY` | (자동 생성) | 데이터소스 비밀번호 암호화용 AES 키 |
 
 스토리지(Local 또는 S3)는 설정 시 웹 UI에서 구성합니다.
+
+## 동작 방식
+
+```
+PostgreSQL / MySQL
+        |
+   스케줄 또는 수동 트리거
+        |
+   Parquet 파일로 스냅샷 ──→ 로컬 또는 S3 스토리지
+        |
+   DuckDB SQL 엔진 ──→ 조회, 분석, 비교
+```
+
+1. **캡처** — 스케줄 또는 수동 트리거로 테이블을 읽어 Parquet 파일로 저장
+2. **저장** — 스냅샷은 로컬 파일 시스템 또는 S3 호환 스토리지에 보관
+3. **조회** — DuckDB가 Parquet 파일을 직접 읽음 — 임포트도, 복원도 필요 없음
 
 ## 아키텍처
 

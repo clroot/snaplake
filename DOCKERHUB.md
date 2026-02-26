@@ -1,15 +1,14 @@
 # Snaplake
 
-Self-hosted database snapshot management platform. Captures point-in-time snapshots from PostgreSQL and MySQL databases as Parquet files, stores them locally or on S3, and lets you query and compare snapshots with SQL powered by DuckDB.
+Self-hosted tool for querying past database states without restoring backups. Captures periodic snapshots of PostgreSQL and MySQL tables as Parquet files, and lets you query any point in time with SQL powered by DuckDB.
 
 ![Dashboard](https://raw.githubusercontent.com/clroot/snaplake/main/docs/screenshots/features/dashboard.png)
 
 ## Features
 
-- **Database Snapshots** — Capture full table snapshots as Apache Parquet files
-- **SQL Query Engine** — Write SQL queries across any snapshot using DuckDB
+- **SQL Query Engine** — Query any snapshot with SQL using DuckDB, supports joins and aggregations
 - **Snapshot Comparison** — Row-level diff with color-coded highlighting
-- **Scheduled Snapshots** — Cron-based automatic snapshots per datasource
+- **Automatic Snapshots** — Cron-based capture as Apache Parquet files
 - **Retention Policies** — Daily/monthly retention limits to manage storage
 - **Flexible Storage** — Local filesystem or S3-compatible object storage
 - **Setup Wizard** — Guided initial setup for admin account, storage, and first datasource

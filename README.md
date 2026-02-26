@@ -5,33 +5,32 @@
 [![Docker Image Version](https://img.shields.io/docker/v/abcdkh1209/snaplake?sort=semver&label=Docker%20Hub)](https://hub.docker.com/r/abcdkh1209/snaplake)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Self-hosted database snapshot management platform. Captures point-in-time snapshots from PostgreSQL and MySQL databases as Parquet files, stores them locally or on S3, and lets you query and compare snapshots with SQL powered by DuckDB.
+Self-hosted tool for querying past database states without restoring backups. Captures periodic snapshots of PostgreSQL and MySQL tables as Parquet files, and lets you query any point in time with SQL powered by DuckDB.
 
 ![Dashboard](docs/screenshots/features/dashboard.png)
 
 ## Features
 
-### Database Snapshots
-
-Capture full table snapshots as Apache Parquet files. Browse snapshot contents with filtering, sorting, and CSV/JSON export.
-
-![Snapshot Browser](docs/screenshots/features/snapshots.png)
-
 ### SQL Query Engine
 
-Write SQL queries across any snapshot using DuckDB. Join tables, aggregate data, and export results.
+Query any snapshot with SQL using DuckDB. Supports joins, aggregations, filtering, and CSV/JSON export.
 
 ![SQL Query](docs/screenshots/features/query.png)
 
 ### Snapshot Comparison
 
-Compare two snapshots side-by-side with row-level diff. Instantly see added, removed, and modified rows with color-coded highlighting.
+Compare two snapshots side-by-side with row-level diff. Added, removed, and modified rows are color-coded.
 
 ![Compare Diff](docs/screenshots/features/compare-diff.png)
 
+### Automatic Snapshots
+
+Capture full table snapshots as Apache Parquet files on a cron schedule. Browse snapshot contents with filtering, sorting, and CSV/JSON export.
+
+![Snapshot Browser](docs/screenshots/features/snapshots.png)
+
 ### And More
 
-- **Scheduled Snapshots** — Cron-based automatic snapshots per datasource
 - **Retention Policies** — Daily/monthly retention limits to manage storage automatically
 - **Flexible Storage** — Local filesystem or S3-compatible object storage (AWS S3, MinIO, etc.)
 - **Setup Wizard** — Guided initial setup for admin account, storage, and first datasource
@@ -101,6 +100,22 @@ All configuration is done via environment variables:
 | `SNAPLAKE_ENCRYPTION_KEY` | (auto-generated) | AES key for encrypting datasource passwords |
 
 Storage (Local or S3) is configured through the web UI during setup.
+
+## How It Works
+
+```
+PostgreSQL / MySQL
+        |
+   Scheduled or manual trigger
+        |
+   Snapshot as Parquet files ──→ Local or S3 storage
+        |
+   DuckDB SQL engine ──→ Query, analyze, compare
+```
+
+1. **Capture** — On schedule or manual trigger, Snaplake reads tables and writes them as Parquet files
+2. **Store** — Snapshots go to local filesystem or any S3-compatible storage
+3. **Query** — DuckDB reads the Parquet files directly — no import, no restoration
 
 ## Architecture
 
