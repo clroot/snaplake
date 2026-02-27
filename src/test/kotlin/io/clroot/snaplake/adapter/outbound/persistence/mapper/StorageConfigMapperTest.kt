@@ -87,6 +87,13 @@ class StorageConfigMapperTest :
                             s3Endpoint = null,
                             s3AccessKey = "ENC:encrypted(AKIAIOSFODNN7EXAMPLE)",
                             s3SecretKey = "ENC:encrypted(wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY)",
+                            smbHost = null,
+                            smbPort = null,
+                            smbShare = null,
+                            smbPath = null,
+                            smbDomain = null,
+                            smbUsername = null,
+                            smbPassword = null,
                             updatedAt = "2026-01-01T00:00:00Z",
                         )
 
@@ -109,6 +116,13 @@ class StorageConfigMapperTest :
                             s3Endpoint = null,
                             s3AccessKey = "AKIAIOSFODNN7EXAMPLE",
                             s3SecretKey = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+                            smbHost = null,
+                            smbPort = null,
+                            smbShare = null,
+                            smbPath = null,
+                            smbDomain = null,
+                            smbUsername = null,
+                            smbPassword = null,
                             updatedAt = "2026-01-01T00:00:00Z",
                         )
 

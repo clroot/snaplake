@@ -37,6 +37,13 @@ class StorageConfigMigrationRunnerTest :
                             s3Endpoint = null,
                             s3AccessKey = "AKIAIOSFODNN7EXAMPLE",
                             s3SecretKey = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+                            smbHost = null,
+                            smbPort = null,
+                            smbShare = null,
+                            smbPath = null,
+                            smbDomain = null,
+                            smbUsername = null,
+                            smbPassword = null,
                             updatedAt = "2026-01-01T00:00:00Z",
                         )
                     every { repository.findById(1) } returns Optional.of(entity)
@@ -64,6 +71,13 @@ class StorageConfigMigrationRunnerTest :
                             s3Endpoint = null,
                             s3AccessKey = "ENC:already-encrypted-access",
                             s3SecretKey = "ENC:already-encrypted-secret",
+                            smbHost = null,
+                            smbPort = null,
+                            smbShare = null,
+                            smbPath = null,
+                            smbDomain = null,
+                            smbUsername = null,
+                            smbPassword = null,
                             updatedAt = "2026-01-01T00:00:00Z",
                         )
                     every { repository.findById(1) } returns Optional.of(entity)
@@ -100,6 +114,13 @@ class StorageConfigMigrationRunnerTest :
                             s3Endpoint = null,
                             s3AccessKey = null,
                             s3SecretKey = null,
+                            smbHost = null,
+                            smbPort = null,
+                            smbShare = null,
+                            smbPath = null,
+                            smbDomain = null,
+                            smbUsername = null,
+                            smbPassword = null,
                             updatedAt = "2026-01-01T00:00:00Z",
                         )
                     every { repository.findById(1) } returns Optional.of(entity)
