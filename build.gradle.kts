@@ -49,6 +49,9 @@ dependencies {
     // S3
     implementation("software.amazon.awssdk:s3:2.30.18")
 
+    // SMB
+    implementation("com.hierynomus:smbj:0.14.0")
+
     // PostgreSQL + MySQL JDBC
     runtimeOnly("org.postgresql:postgresql")
     runtimeOnly("com.mysql:mysql-connector-j")
