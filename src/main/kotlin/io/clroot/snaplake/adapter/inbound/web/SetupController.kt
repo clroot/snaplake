@@ -6,6 +6,7 @@ import io.clroot.snaplake.adapter.inbound.web.dto.StorageTestResponse
 import io.clroot.snaplake.adapter.inbound.web.dto.TestStorageRequest
 import io.clroot.snaplake.adapter.outbound.storage.LocalStorageAdapter
 import io.clroot.snaplake.adapter.outbound.storage.S3StorageAdapter
+import io.clroot.snaplake.adapter.outbound.storage.SmbStorageAdapter
 import io.clroot.snaplake.application.port.inbound.GetSetupStatusUseCase
 import io.clroot.snaplake.application.port.inbound.InitializeSystemUseCase
 import io.clroot.snaplake.domain.model.StorageType
@@ -47,6 +48,13 @@ class SetupController(
                 s3Endpoint = request.s3Endpoint,
                 s3AccessKey = request.s3AccessKey,
                 s3SecretKey = request.s3SecretKey,
+                smbHost = request.smbHost,
+                smbPort = request.smbPort,
+                smbShare = request.smbShare,
+                smbPath = request.smbPath,
+                smbDomain = request.smbDomain,
+                smbUsername = request.smbUsername,
+                smbPassword = request.smbPassword,
             ),
         )
         return ResponseEntity.ok().build()
@@ -86,6 +94,25 @@ class SetupController(
                             endpoint = request.s3Endpoint,
                             accessKey = request.s3AccessKey,
                             secretKey = request.s3SecretKey,
+                        ).testConnection()
+                }
+
+                StorageType.SMB -> {
+                    val host =
+                        request.smbHost
+                            ?: throw IllegalArgumentException("SMB host is required for SMB storage")
+                    val share =
+                        request.smbShare
+                            ?: throw IllegalArgumentException("SMB share is required for SMB storage")
+                    SmbStorageAdapter
+                        .create(
+                            host = host,
+                            share = share,
+                            port = request.smbPort,
+                            path = request.smbPath,
+                            domain = request.smbDomain,
+                            username = request.smbUsername,
+                            password = request.smbPassword,
                         ).testConnection()
                 }
             }

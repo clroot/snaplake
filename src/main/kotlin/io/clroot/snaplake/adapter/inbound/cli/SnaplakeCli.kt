@@ -116,6 +116,13 @@ class SnaplakeCli(
                     s3Endpoint = null,
                     s3AccessKey = null,
                     s3SecretKey = null,
+                    smbHost = null,
+                    smbPort = null,
+                    smbShare = null,
+                    smbPath = null,
+                    smbDomain = null,
+                    smbUsername = null,
+                    smbPassword = null,
                 ),
             )
             log.info("System initialized successfully. Admin user: {}", username)

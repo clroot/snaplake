@@ -52,6 +52,18 @@ class SetupService(
                         secretKey = command.s3SecretKey,
                     )
                 }
+
+                StorageType.SMB -> {
+                    StorageConfig.smb(
+                        host = command.smbHost ?: throw IllegalArgumentException("SMB host is required for SMB storage"),
+                        share = command.smbShare ?: throw IllegalArgumentException("SMB share is required for SMB storage"),
+                        port = command.smbPort,
+                        path = command.smbPath,
+                        domain = command.smbDomain,
+                        username = command.smbUsername,
+                        password = command.smbPassword,
+                    )
+                }
             }
         saveStorageConfigPort.save(storageConfig)
     }
