@@ -44,6 +44,13 @@ class StorageController(
                     s3Endpoint = request.s3Endpoint,
                     s3AccessKey = request.s3AccessKey,
                     s3SecretKey = request.s3SecretKey,
+                    smbHost = request.smbHost,
+                    smbPort = request.smbPort,
+                    smbShare = request.smbShare,
+                    smbPath = request.smbPath,
+                    smbDomain = request.smbDomain,
+                    smbUsername = request.smbUsername,
+                    smbPassword = request.smbPassword,
                 ),
             )
         return ResponseEntity.ok(StorageSettingsResponse.from(config))
