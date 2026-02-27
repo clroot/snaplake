@@ -3,6 +3,7 @@ package io.clroot.snaplake.config
 import io.clroot.snaplake.adapter.outbound.storage.CachingStorageProvider
 import io.clroot.snaplake.adapter.outbound.storage.LocalStorageAdapter
 import io.clroot.snaplake.adapter.outbound.storage.S3StorageAdapter
+import io.clroot.snaplake.adapter.outbound.storage.SmbStorageAdapter
 import io.clroot.snaplake.application.port.outbound.LoadStorageConfigPort
 import io.clroot.snaplake.application.port.outbound.StorageProvider
 import io.clroot.snaplake.domain.model.StorageType
@@ -72,6 +73,28 @@ class StorageProviderConfig(
                         val cacheDir = Path.of(dataDir, "cache", "snapshots")
                         log.info("S3 snapshot caching enabled: {}", cacheDir)
                         CachingStorageProvider(s3Adapter, cacheDir)
+                    }
+
+                    StorageType.SMB -> {
+                        log.info(
+                            "Using SMB storage: host={}, share={}, path={}",
+                            config.smbHost,
+                            config.smbShare,
+                            config.smbPath,
+                        )
+                        val smbAdapter =
+                            SmbStorageAdapter.create(
+                                host = config.smbHost!!,
+                                share = config.smbShare!!,
+                                port = config.smbPort,
+                                path = config.smbPath,
+                                domain = config.smbDomain,
+                                username = config.smbUsername,
+                                password = config.smbPassword,
+                            )
+                        val cacheDir = Path.of(dataDir, "cache", "snapshots")
+                        log.info("SMB snapshot caching enabled: {}", cacheDir)
+                        CachingStorageProvider(smbAdapter, cacheDir)
                     }
                 }
             }

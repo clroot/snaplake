@@ -57,6 +57,26 @@ class StorageSettingsService(
                         secretKey = secretKey,
                     )
                 }
+
+                StorageType.SMB -> {
+                    val password =
+                        command.smbPassword?.takeIf { it.isNotBlank() }
+                            ?: existing?.smbPassword
+
+                    StorageConfig.smb(
+                        host =
+                            command.smbHost
+                                ?: throw IllegalArgumentException("SMB host is required for SMB storage"),
+                        share =
+                            command.smbShare
+                                ?: throw IllegalArgumentException("SMB share is required for SMB storage"),
+                        port = command.smbPort,
+                        path = command.smbPath,
+                        domain = command.smbDomain,
+                        username = command.smbUsername,
+                        password = password,
+                    )
+                }
             }
         val saved = saveStorageConfigPort.save(config)
         storageProviderConfig.refresh()

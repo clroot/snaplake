@@ -49,6 +49,13 @@ class SetupServiceTest :
                             s3Endpoint = null,
                             s3AccessKey = null,
                             s3SecretKey = null,
+                            smbHost = null,
+                            smbPort = null,
+                            smbShare = null,
+                            smbPath = null,
+                            smbDomain = null,
+                            smbUsername = null,
+                            smbPassword = null,
                         ),
                     )
 
@@ -79,6 +86,13 @@ class SetupServiceTest :
                                 s3Endpoint = null,
                                 s3AccessKey = null,
                                 s3SecretKey = null,
+                                smbHost = null,
+                                smbPort = null,
+                                smbShare = null,
+                                smbPath = null,
+                                smbDomain = null,
+                                smbUsername = null,
+                                smbPassword = null,
                             ),
                         )
                     }
@@ -102,6 +116,13 @@ class SetupServiceTest :
                             s3Endpoint = "https://s3.example.com",
                             s3AccessKey = "access-key",
                             s3SecretKey = "secret-key",
+                            smbHost = null,
+                            smbPort = null,
+                            smbShare = null,
+                            smbPath = null,
+                            smbDomain = null,
+                            smbUsername = null,
+                            smbPassword = null,
                         ),
                     )
 

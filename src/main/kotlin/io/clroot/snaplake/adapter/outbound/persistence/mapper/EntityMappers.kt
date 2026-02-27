@@ -101,6 +101,13 @@ class StorageConfigMapper(
             s3Endpoint = config.s3Endpoint,
             s3AccessKey = config.s3AccessKey?.let { ENCRYPTED_PREFIX + encryptionPort.encrypt(it) },
             s3SecretKey = config.s3SecretKey?.let { ENCRYPTED_PREFIX + encryptionPort.encrypt(it) },
+            smbHost = config.smbHost,
+            smbPort = config.smbPort,
+            smbShare = config.smbShare,
+            smbPath = config.smbPath,
+            smbDomain = config.smbDomain,
+            smbUsername = config.smbUsername,
+            smbPassword = config.smbPassword?.let { ENCRYPTED_PREFIX + encryptionPort.encrypt(it) },
             updatedAt = Instant.now().toString(),
         )
 
@@ -113,6 +120,13 @@ class StorageConfigMapper(
             s3Endpoint = entity.s3Endpoint,
             s3AccessKey = entity.s3AccessKey?.let { decryptIfNeeded(it) },
             s3SecretKey = entity.s3SecretKey?.let { decryptIfNeeded(it) },
+            smbHost = entity.smbHost,
+            smbPort = entity.smbPort,
+            smbShare = entity.smbShare,
+            smbPath = entity.smbPath,
+            smbDomain = entity.smbDomain,
+            smbUsername = entity.smbUsername,
+            smbPassword = entity.smbPassword?.let { decryptIfNeeded(it) },
         )
 
     private fun decryptIfNeeded(value: String): String =

@@ -24,6 +24,20 @@ class StorageConfigEntity(
     var s3AccessKey: String?,
     @Column(name = "s3_secret_key")
     var s3SecretKey: String?,
+    @Column(name = "smb_host")
+    val smbHost: String?,
+    @Column(name = "smb_port")
+    val smbPort: Int?,
+    @Column(name = "smb_share")
+    val smbShare: String?,
+    @Column(name = "smb_path")
+    val smbPath: String?,
+    @Column(name = "smb_domain")
+    val smbDomain: String?,
+    @Column(name = "smb_username")
+    val smbUsername: String?,
+    @Column(name = "smb_password")
+    var smbPassword: String?,
     @Column(name = "updated_at", nullable = false)
     val updatedAt: String,
 )

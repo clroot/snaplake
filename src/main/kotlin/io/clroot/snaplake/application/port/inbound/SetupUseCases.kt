@@ -15,6 +15,13 @@ interface InitializeSystemUseCase {
         val s3Endpoint: String?,
         val s3AccessKey: String?,
         val s3SecretKey: String?,
+        val smbHost: String?,
+        val smbPort: Int?,
+        val smbShare: String?,
+        val smbPath: String?,
+        val smbDomain: String?,
+        val smbUsername: String?,
+        val smbPassword: String?,
     )
 }
 

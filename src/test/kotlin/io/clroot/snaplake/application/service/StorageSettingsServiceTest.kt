@@ -60,6 +60,13 @@ class StorageSettingsServiceTest :
                             s3Endpoint = null,
                             s3AccessKey = null,
                             s3SecretKey = null,
+                            smbHost = null,
+                            smbPort = null,
+                            smbShare = null,
+                            smbPath = null,
+                            smbDomain = null,
+                            smbUsername = null,
+                            smbPassword = null,
                         ),
                     )
 
@@ -82,6 +89,13 @@ class StorageSettingsServiceTest :
                             s3Endpoint = "https://s3.example.com",
                             s3AccessKey = "access",
                             s3SecretKey = "secret",
+                            smbHost = null,
+                            smbPort = null,
+                            smbShare = null,
+                            smbPath = null,
+                            smbDomain = null,
+                            smbUsername = null,
+                            smbPassword = null,
                         ),
                     )
 
@@ -112,6 +126,13 @@ class StorageSettingsServiceTest :
                             s3Endpoint = null,
                             s3AccessKey = null,
                             s3SecretKey = null,
+                            smbHost = null,
+                            smbPort = null,
+                            smbShare = null,
+                            smbPath = null,
+                            smbDomain = null,
+                            smbUsername = null,
+                            smbPassword = null,
                         ),
                     )
 
