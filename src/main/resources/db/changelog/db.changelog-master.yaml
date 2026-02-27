@@ -290,3 +290,32 @@ databaseChangeLog:
             sql: "ALTER TABLE snapshots ADD COLUMN tags TEXT NOT NULL DEFAULT '[]'"
         - sql:
             sql: "ALTER TABLE snapshots ADD COLUMN memo TEXT"
+
+  - changeSet:
+      id: 10-add-smb-columns-to-storage-config
+      author: snaplake
+      changes:
+        - addColumn:
+            tableName: storage_config
+            columns:
+              - column:
+                  name: smb_host
+                  type: TEXT
+              - column:
+                  name: smb_port
+                  type: INT
+              - column:
+                  name: smb_share
+                  type: TEXT
+              - column:
+                  name: smb_path
+                  type: TEXT
+              - column:
+                  name: smb_domain
+                  type: TEXT
+              - column:
+                  name: smb_username
+                  type: TEXT
+              - column:
+                  name: smb_password
+                  type: TEXT
