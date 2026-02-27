@@ -8,4 +8,4 @@
 
 새 기능 추가 시 구현할 인터페이스:
 - `DatabaseDialect` — 새 DB 지원 추가 (현재: PostgreSQL, MySQL)
-- `StorageProvider` — 새 스토리지 백엔드 추가 (현재: Local, S3)
+- `StorageProvider` — 새 스토리지 백엔드 추가 (현재: Local, S3, SMB)
