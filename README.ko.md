@@ -74,7 +74,7 @@ Snaplake와 함께 샘플 데이터(customers, products, orders)가 로드된 Po
 
 ### 로컬 개발
 
-**사전 요구사항:** Java 21, [Bun](https://bun.sh)
+**사전 요구사항:** Java 25, [Bun](https://bun.sh)
 
 ```bash
 # 백엔드 시작 (포트 8080)
@@ -143,7 +143,7 @@ adapter/outbound    (JPA, DuckDB, S3, Local Storage)
 
 | 계층 | 기술 |
 |---|---|
-| Backend | Kotlin, Spring Boot 3.4, Java 21 |
+| Backend | Kotlin, Spring Boot 4.1, Java 25 |
 | Metadata DB | SQLite |
 | Query Engine | DuckDB |
 | Snapshot Format | Apache Parquet |

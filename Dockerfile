@@ -7,7 +7,7 @@ COPY frontend/ .
 RUN bun run build
 
 # Stage 2: Backend build
-FROM gradle:8.13-jdk21 AS backend
+FROM gradle:9.1.0-jdk25 AS backend
 WORKDIR /app
 COPY build.gradle.kts settings.gradle.kts gradle.properties ./
 COPY src/ src/
@@ -15,7 +15,7 @@ COPY --from=frontend /app/frontend/../src/main/resources/static src/main/resourc
 RUN gradle bootJar --no-daemon -x buildFrontend -x test
 
 # Stage 3: Runtime
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 WORKDIR /app
 
 RUN groupadd -r snaplake && useradd -r -g snaplake snaplake
