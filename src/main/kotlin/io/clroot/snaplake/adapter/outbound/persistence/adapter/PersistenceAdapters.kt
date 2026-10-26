@@ -73,13 +73,15 @@ class StorageConfigPersistenceAdapter(
 class SnapshotPersistenceAdapter(
     private val jpaRepository: SnapshotJpaRepository,
     private val mapper: SnapshotMapper,
+    private val writeTransaction: SQLiteWriteTransaction,
 ) : SaveSnapshotPort,
     LoadSnapshotPort {
-    override fun save(snapshot: SnapshotMeta): SnapshotMeta {
-        val entity = mapper.toEntity(snapshot)
-        val saved = jpaRepository.save(entity)
-        return mapper.toDomain(saved)
-    }
+    override fun save(snapshot: SnapshotMeta): SnapshotMeta =
+        writeTransaction.write("save snapshot ${snapshot.id.value}") {
+            val entity = mapper.toEntity(snapshot)
+            val saved = jpaRepository.save(entity)
+            mapper.toDomain(saved)
+        }
 
     override fun findById(id: SnapshotId): SnapshotMeta? = jpaRepository.findById(id.value).orElse(null)?.let { mapper.toDomain(it) }
 

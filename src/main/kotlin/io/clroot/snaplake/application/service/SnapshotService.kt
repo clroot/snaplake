@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
+import java.util.concurrent.ConcurrentHashMap
 
 @Service
 class SnapshotService(
@@ -34,8 +35,18 @@ class SnapshotService(
     RecoverOrphanedSnapshotsUseCase,
     UpdateSnapshotMetadataUseCase {
     private val log = LoggerFactory.getLogger(javaClass)
+    private val activeDatasources = ConcurrentHashMap.newKeySet<DatasourceId>()
 
     override fun takeSnapshot(datasourceId: DatasourceId): SnapshotMeta {
+        if (!activeDatasources.add(datasourceId)) throw SnapshotAlreadyRunningException(datasourceId)
+        try {
+            return createSnapshot(datasourceId)
+        } finally {
+            activeDatasources.remove(datasourceId)
+        }
+    }
+
+    private fun createSnapshot(datasourceId: DatasourceId): SnapshotMeta {
         val datasource =
             loadDatasourcePort.findById(datasourceId)
                 ?: throw DatasourceNotFoundException(datasourceId)
@@ -62,13 +73,15 @@ class SnapshotService(
                 snapshotType = snapshotType,
                 snapshotDate = snapshotDate,
             )
-        saveSnapshotPort.save(snapshot)
-
-        val dialect = dialectRegistry.getDialect(datasource.type)
-        val decryptedPassword = encryptionPort.decrypt(datasource.encryptedPassword)
         val errors = mutableListOf<String>()
+        var failureMessage = "Snapshot terminated unexpectedly"
+        var finalStateSaved = false
 
         try {
+            saveSnapshotPort.save(snapshot)
+            val dialect = dialectRegistry.getDialect(datasource.type)
+            val decryptedPassword = encryptionPort.decrypt(datasource.encryptedPassword)
+
             try {
                 dialect.createConnection(datasource, decryptedPassword).use { conn ->
                     for (schema in datasource.schemas) {
@@ -151,6 +164,7 @@ class SnapshotService(
                 log.error("Failed to connect to datasource '{}': {}", datasource.name, e.message)
                 snapshot.fail("Connection failed: ${e.message}")
                 saveSnapshotPort.save(snapshot)
+                finalStateSaved = true
                 return snapshot
             }
 
@@ -160,6 +174,7 @@ class SnapshotService(
                 snapshot.complete()
             }
             saveSnapshotPort.save(snapshot)
+            finalStateSaved = true
 
             // Handle monthly snapshots (1st of month)
             if (snapshotDate.dayOfMonth == 1) {
@@ -170,14 +185,23 @@ class SnapshotService(
             applyRetention(datasource)
 
             return snapshot
+        } catch (e: Exception) {
+            failureMessage = "Snapshot failed: ${e.message}"
+            throw e
         } finally {
-            if (snapshot.status == SnapshotStatus.RUNNING) {
+            // The in-memory state may already be terminal while the database still says RUNNING.
+            if (!finalStateSaved) {
                 try {
-                    snapshot.fail("Snapshot terminated unexpectedly")
+                    if (snapshot.status == SnapshotStatus.RUNNING) snapshot.fail(failureMessage)
                     saveSnapshotPort.save(snapshot)
-                    log.error("Snapshot {} terminated unexpectedly, marked as FAILED", snapshot.id.value)
+                    log.error("Snapshot {} did not finish normally, saved as {}", snapshot.id.value, snapshot.status)
                 } catch (ex: Exception) {
-                    log.error("Failed to mark orphaned snapshot {} as FAILED: {}", snapshot.id.value, ex.message)
+                    log.error(
+                        "event=snapshot_failure_persistence_failed snapshotId={} datasourceId={}",
+                        snapshot.id.value,
+                        datasourceId.value,
+                        ex,
+                    )
                 }
             }
         }

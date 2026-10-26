@@ -103,6 +103,99 @@ class SnapshotServiceTest :
                 }
             }
 
+            context("최초 메타데이터 저장에 실패한 경우") {
+                it("같은 ID로 FAILED를 기록하고 원래 예외를 전달한다") {
+                    val failure = IllegalStateException("metadata unavailable")
+                    val attempts = mutableListOf<Pair<SnapshotId, SnapshotStatus>>()
+                    every { loadDatasourcePort.findById(datasourceId) } returns datasource
+                    every { loadSnapshotPort.findByDatasourceIdAndStatus(datasourceId, SnapshotStatus.RUNNING) } returns null
+                    every { saveSnapshotPort.save(any()) } answers {
+                        val snapshot = firstArg<SnapshotMeta>()
+                        attempts.add(snapshot.id to snapshot.status)
+                        if (attempts.size == 1) throw failure
+                        snapshot
+                    }
+
+                    shouldThrow<IllegalStateException> { sut.takeSnapshot(datasourceId) } shouldBe failure
+
+                    attempts.map { it.second } shouldBe listOf(SnapshotStatus.RUNNING, SnapshotStatus.FAILED)
+                    attempts.map { it.first }.distinct().size shouldBe 1
+                    verify { dialectRegistry wasNot Called }
+                }
+
+                it("실패 상태 기록도 실패하면 최초 예외를 유지한다") {
+                    val initialFailure = IllegalStateException("initial write failed")
+                    every { loadDatasourcePort.findById(datasourceId) } returns datasource
+                    every { loadSnapshotPort.findByDatasourceIdAndStatus(datasourceId, SnapshotStatus.RUNNING) } returns null
+                    every { saveSnapshotPort.save(any()) } throws initialFailure andThenThrows RuntimeException("failure write failed")
+
+                    shouldThrow<IllegalStateException> { sut.takeSnapshot(datasourceId) } shouldBe initialFailure
+                    verify(exactly = 2) { saveSnapshotPort.save(any()) }
+                    verify { dialectRegistry wasNot Called }
+                }
+            }
+
+            context("최종 상태 저장에 실패한 경우") {
+                it("연결 실패 기록이 저장되지 않으면 FAILED를 다시 저장한다") {
+                    val savedStatuses = mutableListOf<SnapshotStatus>()
+                    val dialect = mockk<DatabaseDialect>()
+                    every { loadDatasourcePort.findById(datasourceId) } returns datasource
+                    every { loadSnapshotPort.findByDatasourceIdAndStatus(datasourceId, SnapshotStatus.RUNNING) } returns null
+                    every { encryptionPort.decrypt("encrypted") } returns "password"
+                    every { dialectRegistry.getDialect(DatabaseType.POSTGRESQL) } returns dialect
+                    every { dialect.createConnection(datasource, "password") } throws RuntimeException("Connection refused")
+                    every { saveSnapshotPort.save(any()) } answers {
+                        val snapshot = firstArg<SnapshotMeta>()
+                        savedStatuses.add(snapshot.status)
+                        if (savedStatuses.size == 2) throw IllegalStateException("metadata locked")
+                        snapshot
+                    }
+
+                    shouldThrow<IllegalStateException> { sut.takeSnapshot(datasourceId) }
+
+                    savedStatuses shouldBe listOf(SnapshotStatus.RUNNING, SnapshotStatus.FAILED, SnapshotStatus.FAILED)
+                }
+
+                it("완료 기록이 저장되지 않으면 COMPLETED를 다시 저장한다") {
+                    val savedStatuses = mutableListOf<SnapshotStatus>()
+                    val dialect = mockk<DatabaseDialect>()
+                    val conn = mockk<Connection>(relaxed = true)
+                    every { loadDatasourcePort.findById(datasourceId) } returns datasource
+                    every { loadSnapshotPort.findByDatasourceIdAndStatus(datasourceId, SnapshotStatus.RUNNING) } returns null
+                    every { encryptionPort.decrypt("encrypted") } returns "password"
+                    every { dialectRegistry.getDialect(DatabaseType.POSTGRESQL) } returns dialect
+                    every { dialect.createConnection(datasource, "password") } returns conn
+                    every { dialect.listTables(conn, "public") } returns emptyList()
+                    every { saveSnapshotPort.save(any()) } answers {
+                        val snapshot = firstArg<SnapshotMeta>()
+                        savedStatuses.add(snapshot.status)
+                        if (savedStatuses.size == 2) throw IllegalStateException("metadata locked")
+                        snapshot
+                    }
+
+                    shouldThrow<IllegalStateException> { sut.takeSnapshot(datasourceId) }
+
+                    savedStatuses shouldBe listOf(SnapshotStatus.RUNNING, SnapshotStatus.COMPLETED, SnapshotStatus.COMPLETED)
+                }
+            }
+
+            context("복호화에 실패한 경우") {
+                it("RUNNING을 남기지 않고 FAILED로 저장한다") {
+                    val savedStatuses = mutableListOf<SnapshotStatus>()
+                    every { loadDatasourcePort.findById(datasourceId) } returns datasource
+                    every { loadSnapshotPort.findByDatasourceIdAndStatus(datasourceId, SnapshotStatus.RUNNING) } returns null
+                    every { dialectRegistry.getDialect(DatabaseType.POSTGRESQL) } returns mockk()
+                    every { encryptionPort.decrypt(any()) } throws IllegalStateException("invalid credentials")
+                    every { saveSnapshotPort.save(any()) } answers {
+                        firstArg<SnapshotMeta>().also { savedStatuses.add(it.status) }
+                    }
+
+                    shouldThrow<IllegalStateException> { sut.takeSnapshot(datasourceId) }
+
+                    savedStatuses shouldBe listOf(SnapshotStatus.RUNNING, SnapshotStatus.FAILED)
+                }
+            }
+
             context("정상적인 스냅샷인 경우") {
                 it("테이블을 Parquet로 변환하여 저장한다") {
                     val dialect = mockk<DatabaseDialect>()

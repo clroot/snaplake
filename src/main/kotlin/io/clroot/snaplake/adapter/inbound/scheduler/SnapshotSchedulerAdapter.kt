@@ -4,7 +4,9 @@ import io.clroot.snaplake.application.port.inbound.TakeSnapshotUseCase
 import io.clroot.snaplake.application.port.outbound.LoadDatasourcePort
 import io.clroot.snaplake.application.port.outbound.ScheduledTaskInfo
 import io.clroot.snaplake.application.port.outbound.SnapshotSchedulerPort
+import io.clroot.snaplake.domain.exception.SnapshotAlreadyRunningException
 import io.clroot.snaplake.domain.model.Datasource
+import io.clroot.snaplake.domain.model.SnapshotStatus
 import io.clroot.snaplake.domain.vo.DatasourceId
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
@@ -100,10 +102,23 @@ class SnapshotSchedulerAdapter(
     ) {
         try {
             log.info("Starting scheduled snapshot for datasource '{}'", datasourceName)
-            takeSnapshotUseCase.takeSnapshot(datasourceId)
-            log.info("Completed scheduled snapshot for datasource '{}'", datasourceName)
+            val snapshot = takeSnapshotUseCase.takeSnapshot(datasourceId)
+            if (snapshot.status == SnapshotStatus.COMPLETED) {
+                log.info("Completed scheduled snapshot for datasource '{}'", datasourceName)
+            } else {
+                log.error(
+                    "event=scheduled_snapshot_failed datasourceId={} datasourceName={} snapshotId={} status={} reason={}",
+                    datasourceId.value,
+                    datasourceName,
+                    snapshot.id.value,
+                    snapshot.status,
+                    snapshot.errorMessage,
+                )
+            }
+        } catch (e: SnapshotAlreadyRunningException) {
+            log.warn("event=scheduled_snapshot_skipped datasourceId={} datasourceName={} reason={}", datasourceId.value, datasourceName, e.message)
         } catch (e: Exception) {
-            log.error("Failed scheduled snapshot for datasource '{}': {}", datasourceName, e.message)
+            log.error("event=scheduled_snapshot_failed datasourceId={} datasourceName={}", datasourceId.value, datasourceName, e)
         }
     }
 }
