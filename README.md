@@ -74,7 +74,7 @@ This starts Snaplake alongside a PostgreSQL instance loaded with sample data (cu
 
 ### Local Development
 
-**Prerequisites:** Java 21, [Bun](https://bun.sh)
+**Prerequisites:** Java 25, [Bun](https://bun.sh)
 
 ```bash
 # Start backend (port 8080)
@@ -143,7 +143,7 @@ Dependency direction: `adapter -> application -> domain`
 
 | Layer | Technology |
 |---|---|
-| Backend | Kotlin, Spring Boot 3.4, Java 21 |
+| Backend | Kotlin, Spring Boot 4.1, Java 25 |
 | Metadata DB | SQLite |
 | Query Engine | DuckDB |
 | Snapshot Format | Apache Parquet |
