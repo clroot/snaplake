@@ -4,6 +4,10 @@ spring:
   datasource:
     url: jdbc:sqlite:${SNAPLAKE_DATA_DIR:./data}/snaplake.db
     driver-class-name: org.sqlite.JDBC
+    hikari:
+      data-source-properties:
+        journal_mode: WAL
+        busy_timeout: 1000
   jpa:
     database-platform: org.hibernate.community.dialect.SQLiteDialect
     hibernate:
