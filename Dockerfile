@@ -15,10 +15,15 @@ COPY --from=frontend /app/frontend/../src/main/resources/static src/main/resourc
 RUN gradle bootJar --no-daemon -x buildFrontend -x test
 
 # Stage 3: Runtime
-FROM eclipse-temurin:25-jre
+# Corretto published the 2026-11-17 out-of-band JDK security fix (25.0.5.1) before Temurin did.
+# AL2023 keeps glibc for the DuckDB and SQLite native libraries.
+FROM amazoncorretto:25-al2023-headless
 WORKDIR /app
 
-RUN groupadd -r snaplake && useradd -r -g snaplake snaplake
+RUN dnf install -y shadow-utils \
+    && dnf clean all \
+    && groupadd -r snaplake \
+    && useradd -r -g snaplake snaplake
 RUN mkdir -p /app/data && chown -R snaplake:snaplake /app
 
 COPY --from=backend --chown=snaplake:snaplake /app/build/libs/*.jar snaplake.jar
